@@ -181,6 +181,10 @@ function doGet(e) {
         exigirGestor_();
         result = diagnosticoFase1();
         break;
+      case 'diagnosticoFase2':
+        exigirGestor_();
+        result = diagnosticoFase2();
+        break;
       case 'getAdminData':
         exigirGestor_();
         result = getAdminData();
@@ -815,6 +819,81 @@ function diagnosticoFase1() {
   });
 }
 
+function diagnosticoFase2() {
+  garantirAbasBase();
+  garantirConfigPadrao();
+
+  return sucesso_('diagnosticoFase2', {
+    usuario: obterUsuarioAutorizado_(),
+    administracao: {
+      config_total: obterConfigDetalhada_().length,
+      categorias: obterResumoEntidadeAdmin_('categorias'),
+      grupos: obterResumoEntidadeAdmin_('grupos'),
+      auditoria: obterResumoAuditoria_()
+    },
+    endpoints: [
+      'getAdminData',
+      'saveConfig',
+      'restoreDefaultColors',
+      'listAdminRecords',
+      'saveAdminRecord'
+    ],
+    timestamp: new Date().toISOString()
+  });
+}
+
+function obterResumoEntidadeAdmin_(entidadeNome) {
+  const entidade = obterEntidadeAdmin_(entidadeNome);
+  const sheet = obterPlanilha_().getSheetByName(entidade.sheet);
+  const records = sheet
+    ? lerAbaComoObjetos_(sheet).map(function(row) {
+      return normalizarRegistroAdmin_(row, entidade);
+    })
+    : [];
+
+  return records.reduce(function(acc, record) {
+    acc.total += 1;
+
+    if (normalizar_(record.status) === 'ativo') {
+      acc.ativos += 1;
+    } else {
+      acc.inativos += 1;
+    }
+
+    return acc;
+  }, {
+    total: 0,
+    ativos: 0,
+    inativos: 0
+  });
+}
+
+function obterResumoAuditoria_() {
+  const sheet = obterPlanilha_().getSheetByName('Historico_Auditoria');
+
+  if (!sheet) {
+    return {
+      total: 0,
+      ultimas_acoes: []
+    };
+  }
+
+  const rows = lerAbaComoObjetos_(sheet);
+  const ultimas = rows.slice(-5).reverse().map(function(row) {
+    return {
+      data_evento: formatarDataHora_(row.data_evento),
+      usuario_email: row.usuario_email || '',
+      acao: row.acao || '',
+      entidade: row.entidade || ''
+    };
+  });
+
+  return {
+    total: rows.length,
+    ultimas_acoes: ultimas
+  };
+}
+
 function obterPlanilha_() {
   return SpreadsheetApp.openById(SPREADSHEET_ID);
 }
@@ -1226,6 +1305,16 @@ function formatarData_(valor) {
   }
 
   return Utilities.formatDate(data, obterTimeZone_(), 'dd/MM/yyyy');
+}
+
+function formatarDataHora_(valor) {
+  const data = converterData_(valor);
+
+  if (!data) {
+    return '';
+  }
+
+  return Utilities.formatDate(data, obterTimeZone_(), 'dd/MM/yyyy HH:mm');
 }
 
 function inicioDoDia_(data) {
