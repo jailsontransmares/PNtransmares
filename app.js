@@ -6,6 +6,11 @@ const state = {
   aniversariantes: [],
   favoritos: [],
   meta: null,
+  admin: {
+    config: [],
+    loading: false,
+    message: ''
+  },
   temaAtual: 'claro'
 };
 
@@ -209,7 +214,191 @@ function renderFavoritos() {
 }
 
 function abrirModulo(id) {
+  if (id === 'administracao') {
+    abrirAdministracao();
+    return;
+  }
+
   alert(`Módulo ainda não implementado: ${id}`);
+}
+
+async function abrirAdministracao(preservarMensagem = false) {
+  if (state.usuario?.perfil !== 'gestor') {
+    renderErro('Acesso permitido apenas para gestor.');
+    return;
+  }
+
+  state.admin.loading = true;
+  if (!preservarMensagem) {
+    state.admin.message = '';
+  }
+  renderAdministracao();
+
+  try {
+    const response = await chamarApi('getAdminData');
+
+    if (!response.ok) {
+      throw new Error(response.message || response.error?.message || 'Não foi possível carregar a administração.');
+    }
+
+    state.admin.config = response.data.config || [];
+    state.admin.loading = false;
+    renderAdministracao();
+  } catch (erro) {
+    state.admin.loading = false;
+    state.admin.message = erro.message || 'Erro ao carregar a administração.';
+    renderAdministracao();
+  }
+}
+
+function renderAdministracao() {
+  const nomeSistema = state.config?.nome_sistema || 'PAINEL TRANSMARES';
+
+  document.getElementById('app').innerHTML = `
+    <main class="dashboard">
+      <header class="topbar">
+        <div class="brand">
+          <h1>${escapeHtml(nomeSistema)}</h1>
+          <p>Administração</p>
+        </div>
+
+        <div class="admin-actions">
+          <button class="secondary-btn" type="button" onclick="renderDashboard()">Voltar</button>
+        </div>
+      </header>
+
+      <section class="admin-shell">
+        <div class="admin-tabs">
+          <button class="admin-tab active" type="button">Configurações</button>
+          <button class="admin-tab" type="button" disabled>Categorias</button>
+          <button class="admin-tab" type="button" disabled>Grupos</button>
+        </div>
+
+        <section class="admin-panel">
+          <div class="admin-panel-header">
+            <div>
+              <h2>Configurações do Sistema</h2>
+              <p>Edite uma configuração por vez.</p>
+            </div>
+
+            <button class="secondary-btn" type="button" onclick="restaurarCoresPadrao()">Restaurar cores padrão</button>
+          </div>
+
+          ${state.admin.message ? `<p class="admin-message">${escapeHtml(state.admin.message)}</p>` : ''}
+          ${state.admin.loading ? '<p class="quick-link-empty">Carregando configurações...</p>' : renderConfigAdmin()}
+        </section>
+      </section>
+    </main>
+  `;
+}
+
+function renderConfigAdmin() {
+  if (!state.admin.config.length) {
+    return '<p class="quick-link-empty">Nenhuma configuração encontrada.</p>';
+  }
+
+  return `
+    <div class="config-list">
+      ${state.admin.config.map(item => renderConfigItem(item)).join('')}
+    </div>
+  `;
+}
+
+function renderConfigItem(item) {
+  const inputId = `config_${escapeAttr(item.chave)}`;
+  const disabled = item.editavel === false ? 'disabled' : '';
+  const input = renderConfigInput(item, inputId, disabled);
+
+  return `
+    <article class="config-row">
+      <div class="config-info">
+        <strong>${escapeHtml(item.chave)}</strong>
+        <span>${escapeHtml(item.descricao || '')}</span>
+      </div>
+
+      <div class="config-control">
+        ${input}
+        <button class="save-btn" type="button" onclick="salvarConfigAdmin('${escapeAttr(item.chave)}')" ${disabled}>Salvar</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderConfigInput(item, inputId, disabled) {
+  const valor = escapeAttr(item.valor || '');
+
+  if (item.tipo === 'cor') {
+    return `
+      <input id="${inputId}" class="config-input color-input" type="color" value="${valor || '#000000'}" ${disabled}>
+    `;
+  }
+
+  if (item.tipo === 'numero') {
+    return `<input id="${inputId}" class="config-input" type="number" min="0" step="1" value="${valor}" ${disabled}>`;
+  }
+
+  if (item.tipo === 'booleano') {
+    return `
+      <select id="${inputId}" class="config-input" ${disabled}>
+        <option value="sim" ${item.valor === 'sim' ? 'selected' : ''}>sim</option>
+        <option value="nao" ${item.valor === 'nao' ? 'selected' : ''}>nao</option>
+      </select>
+    `;
+  }
+
+  if (item.chave === 'modo_visual_padrao') {
+    return `
+      <select id="${inputId}" class="config-input" ${disabled}>
+        <option value="claro" ${item.valor === 'claro' ? 'selected' : ''}>claro</option>
+        <option value="escuro" ${item.valor === 'escuro' ? 'selected' : ''}>escuro</option>
+      </select>
+    `;
+  }
+
+  return `<input id="${inputId}" class="config-input" type="text" value="${valor}" ${disabled}>`;
+}
+
+async function salvarConfigAdmin(chave) {
+  const input = document.getElementById(`config_${chave}`);
+
+  if (!input) return;
+
+  try {
+    const response = await chamarApi('saveConfig', {
+      chave,
+      valor: input.value
+    });
+
+    if (!response.ok) {
+      throw new Error(response.message || response.error?.message || 'Não foi possível salvar.');
+    }
+
+    state.config = response.data.config || state.config;
+    aplicarConfigVisual();
+    state.admin.message = 'Configuração salva.';
+    await abrirAdministracao(true);
+  } catch (erro) {
+    state.admin.message = erro.message || 'Erro ao salvar configuração.';
+    renderAdministracao();
+  }
+}
+
+async function restaurarCoresPadrao() {
+  try {
+    const response = await chamarApi('restoreDefaultColors');
+
+    if (!response.ok) {
+      throw new Error(response.message || response.error?.message || 'Não foi possível restaurar as cores.');
+    }
+
+    state.config = response.data.config || state.config;
+    aplicarConfigVisual();
+    state.admin.message = 'Cores padrão restauradas.';
+    await abrirAdministracao(true);
+  } catch (erro) {
+    state.admin.message = erro.message || 'Erro ao restaurar cores.';
+    renderAdministracao();
+  }
 }
 
 function abrirLink(url) {
