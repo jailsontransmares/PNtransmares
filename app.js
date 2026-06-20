@@ -114,23 +114,40 @@ function renderDashboard() {
       </header>
 
       <section class="info-grid">
-        <div class="info-card">
-          <h2>Avisos internos</h2>
-          <p>Nenhum aviso ativo no momento.</p>
-        </div>
+  <div class="info-card">
+    <div class="info-card-header">
+      <span class="info-icon">📢</span>
+      <h2>Avisos internos</h2>
+    </div>
+    <p>Nenhum aviso ativo no momento.</p>
+  </div>
 
-        <div class="info-card">
-          <h2>Aniversariantes</h2>
-          <p>Nenhum aniversariante nos próximos dias.</p>
-        </div>
+  <div class="info-card">
+    <div class="info-card-header">
+      <span class="info-icon">🎂</span>
+      <h2>Aniversariantes</h2>
+    </div>
+    <p>Nenhum aniversariante nos próximos dias.</p>
+  </div>
+</section>
 
-        <div class="info-card">
-          <h2>Links rápidos</h2>
-          <p>Nenhum favorito cadastrado.</p>
-        </div>
-      </section>
+<section class="quick-links-strip">
+  <div class="quick-links-title">
+    <span>⭐</span>
+    <strong>Links rápidos</strong>
+  </div>
 
-      <section class="module-grid">
+  <div class="quick-links-list">
+    <span class="quick-link-empty">Nenhum favorito cadastrado.</span>
+  </div>
+</section>
+
+<div class="section-title">
+  <h2>Módulos</h2>
+  <p>Acesse as principais áreas operacionais do painel.</p>
+</div>
+
+<section class="module-grid">
         ${state.cards.map(card => `
           <article class="module-card" onclick="abrirModulo('${escapeAttr(card.id)}')">
             <h3>${escapeHtml(card.titulo)}</h3>
