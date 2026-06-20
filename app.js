@@ -43,6 +43,23 @@ const state = {
     loading: false,
     message: ''
   },
+  passwords: {
+    categorias: [],
+    grupos: [],
+    items: [],
+    filtros: {
+      categoria: '',
+      grupo: '',
+      status: ''
+    },
+    modalAberto: false,
+    modalId: '',
+    erros: {},
+    salvando: false,
+    salvo: false,
+    loading: false,
+    message: ''
+  },
   temaAtual: 'claro'
 };
 
@@ -252,6 +269,11 @@ function abrirModulo(id) {
 
   if (['links-corretora', 'links-ar', 'links-gestao'].indexOf(id) >= 0) {
     abrirLinksUteis(id);
+    return;
+  }
+
+  if (id === 'central-senhas') {
+    abrirCentralSenhas();
     return;
   }
 
@@ -1143,6 +1165,277 @@ function esperar(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function abrirCentralSenhas() {
+  state.passwords.message = '';
+  state.passwords.modalAberto = false;
+  state.passwords.modalId = '';
+  await carregarCentralSenhas();
+}
+
+async function carregarCentralSenhas() {
+  state.passwords.loading = true;
+  renderCentralSenhas();
+
+  try {
+    const response = await chamarApi('getPasswordsData', {
+      categoria: state.passwords.filtros.categoria,
+      grupo: state.passwords.filtros.grupo,
+      status: state.passwords.filtros.status
+    });
+
+    if (!response.ok) {
+      throw new Error(obterMensagemApi(response, 'Não foi possível carregar a Central de Senhas.'));
+    }
+
+    state.passwords.categorias = response.data.categorias || [];
+    state.passwords.grupos = response.data.grupos || [];
+    state.passwords.items = response.data.acessos || [];
+    state.passwords.loading = false;
+    renderCentralSenhas();
+  } catch (erro) {
+    state.passwords.loading = false;
+    state.passwords.message = erro.message || 'Erro ao carregar a Central de Senhas.';
+    renderCentralSenhas();
+  }
+}
+
+function renderCentralSenhas() {
+  const gestor = state.usuario?.perfil === 'gestor';
+  const nomeSistema = state.config?.nome_sistema || 'PAINEL TRANSMARES';
+  const subtitulo = state.config?.subtitulo_sistema || 'Central operacional da Transmares Corretora de Seguros';
+
+  document.getElementById('app').innerHTML = `
+    <main class="dashboard">
+      <header class="topbar">
+        <div class="brand">
+          <h1>${escapeHtml(nomeSistema)}</h1>
+          <p>${escapeHtml(subtitulo)}</p>
+        </div>
+
+        <div class="user-box">
+          <strong>${escapeHtml(state.usuario.nome || '')}</strong><br>
+          ${escapeHtml(state.usuario.email || '')}<br>
+          <button class="secondary-btn" type="button" onclick="renderDashboard()">Voltar</button>
+        </div>
+      </header>
+
+      <section class="admin-panel">
+        <div class="admin-panel-header">
+          <div>
+            <h2>Central de Senhas</h2>
+            <p>${gestor ? 'Listagem e cadastro de acessos.' : 'Consulte os acessos disponíveis.'}</p>
+          </div>
+        </div>
+
+        <div class="links-toolbar">
+          <select class="config-input" onchange="alterarFiltroSenha('categoria', this.value)">
+            <option value="">Todas as categorias</option>
+            ${state.passwords.categorias.map(item => `<option value="${escapeAttr(item.nome)}" ${state.passwords.filtros.categoria === item.nome ? 'selected' : ''}>${escapeHtml(item.nome)}</option>`).join('')}
+          </select>
+
+          <select class="config-input" onchange="alterarFiltroSenha('grupo', this.value)">
+            <option value="">Todos os grupos</option>
+            ${state.passwords.grupos.map(item => `<option value="${escapeAttr(item.nome)}" ${state.passwords.filtros.grupo === item.nome ? 'selected' : ''}>${escapeHtml(item.nome)}</option>`).join('')}
+          </select>
+
+          ${gestor ? `
+            <select class="config-input" onchange="alterarFiltroSenha('status', this.value)">
+              <option value="">Todos os status</option>
+              <option value="ativo" ${state.passwords.filtros.status === 'ativo' ? 'selected' : ''}>ativos</option>
+              <option value="inativo" ${state.passwords.filtros.status === 'inativo' ? 'selected' : ''}>inativos</option>
+            </select>
+            <button class="add-small-btn" type="button" onclick="abrirModalSenha('')">+ Adicionar</button>
+          ` : ''}
+        </div>
+
+        ${state.passwords.message ? `<p class="admin-message">${escapeHtml(state.passwords.message)}</p>` : ''}
+        ${state.passwords.loading ? '<p class="quick-link-empty">Carregando acessos...</p>' : renderListaSenhas(gestor)}
+        ${renderModalSenha()}
+      </section>
+    </main>
+  `;
+}
+
+function renderListaSenhas(gestor) {
+  if (!state.passwords.items.length) {
+    return '<p class="quick-link-empty">Nenhum acesso cadastrado.</p>';
+  }
+
+  return `<div class="password-list">${state.passwords.items.map(item => renderSenhaItem(item, gestor)).join('')}</div>`;
+}
+
+function renderSenhaItem(item, gestor) {
+  return `
+    <article class="password-row status-line-${escapeAttr(item.status || 'inativo')}">
+      <div>
+        <span class="link-group-label">${escapeHtml(item.grupo || 'Sem grupo')}</span>
+        <h3>${escapeHtml(item.titulo || 'Acesso')}</h3>
+        <p>${escapeHtml(item.descricao || '')}</p>
+        <small>${escapeHtml(item.categoria || 'Sem categoria')}</small>
+      </div>
+
+      <div class="password-fields">
+        <span>Login: ${escapeHtml(item.login || '-')}</span>
+        <span>Senha: ********</span>
+        ${item.url ? `<a class="link-sub-btn" href="${escapeAttr(item.url)}" target="_blank" rel="noopener">Abrir</a>` : ''}
+      </div>
+
+      ${gestor ? `<div class="crud-actions"><button class="icon-btn" type="button" onclick="abrirModalSenha('${escapeAttr(item.id)}')" title="Editar" aria-label="Editar acesso">✎</button></div>` : ''}
+    </article>
+  `;
+}
+
+function renderModalSenha() {
+  if (!state.passwords.modalAberto) {
+    return '';
+  }
+
+  const item = obterSenhaModalAtual();
+  const erros = state.passwords.erros || {};
+  const editando = Boolean(item.id);
+  const botaoTexto = state.passwords.salvo ? 'Salvo' : (state.passwords.salvando ? 'Salvando...' : 'Salvar');
+
+  return `
+    <div class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Acesso">
+      <section class="small-modal link-modal">
+        <div class="small-modal-header">
+          <h3>${editando ? 'Editar acesso' : 'Adicionar acesso'}</h3>
+          <button class="icon-btn" type="button" onclick="fecharModalSenha()" title="Fechar" aria-label="Fechar">×</button>
+        </div>
+
+        <label><span>Título</span><input id="senha_titulo" class="config-input" type="text" value="${escapeAttr(item.titulo || '')}">${renderErroCampo(erros.titulo)}</label>
+        <label><span>Descrição</span><input id="senha_descricao" class="config-input" type="text" value="${escapeAttr(item.descricao || '')}"></label>
+        <label><span>URL/Sistema</span><input id="senha_url" class="config-input" type="url" placeholder="https://" value="${escapeAttr(item.url || '')}">${renderErroCampo(erros.url)}</label>
+        <label><span>Login</span><input id="senha_login" class="config-input" type="text" value="${escapeAttr(item.login || '')}">${renderErroCampo(erros.login)}</label>
+        <label><span>Senha</span><input id="senha_senha" class="config-input" type="text" value="${escapeAttr(item.senha || '')}">${renderErroCampo(erros.senha)}</label>
+        <label><span>Categoria</span><select id="senha_categoria" class="config-input"><option value="">Sem categoria</option>${state.passwords.categorias.map(categoria => `<option value="${escapeAttr(categoria.nome)}" ${item.categoria === categoria.nome ? 'selected' : ''}>${escapeHtml(categoria.nome)}</option>`).join('')}</select></label>
+        <label><span>Grupo</span><select id="senha_grupo" class="config-input"><option value="">Sem grupo</option>${state.passwords.grupos.map(grupo => `<option value="${escapeAttr(grupo.nome)}" ${item.grupo === grupo.nome ? 'selected' : ''}>${escapeHtml(grupo.nome)}</option>`).join('')}</select></label>
+        <label><span>Status</span><select id="senha_status" class="config-input"><option value="ativo" ${item.status !== 'inativo' ? 'selected' : ''}>ativo</option><option value="inativo" ${item.status === 'inativo' ? 'selected' : ''}>inativo</option></select></label>
+
+        <div class="small-modal-actions">
+          <button class="secondary-btn" type="button" onclick="fecharModalSenha()">Cancelar</button>
+          <button id="senha_salvar" class="save-btn saving-btn ${state.passwords.salvando ? 'is-saving' : ''} ${state.passwords.salvo ? 'is-saved' : ''}" type="button" onclick="salvarSenhaItem('${escapeAttr(item.id || '')}')" ${state.passwords.salvando ? 'disabled' : ''}>${botaoTexto}</button>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function obterSenhaModalAtual() {
+  if (!state.passwords.modalId) {
+    return {};
+  }
+
+  return state.passwords.items.find(item => item.id === state.passwords.modalId) || {};
+}
+
+function alterarFiltroSenha(chave, valor) {
+  state.passwords.filtros[chave] = valor;
+  carregarCentralSenhas();
+}
+
+function abrirModalSenha(id) {
+  state.passwords.modalAberto = true;
+  state.passwords.modalId = id || '';
+  state.passwords.erros = {};
+  state.passwords.salvando = false;
+  state.passwords.salvo = false;
+  renderCentralSenhas();
+}
+
+function fecharModalSenha() {
+  state.passwords.modalAberto = false;
+  state.passwords.modalId = '';
+  state.passwords.erros = {};
+  state.passwords.salvando = false;
+  state.passwords.salvo = false;
+  renderCentralSenhas();
+}
+
+async function salvarSenhaItem(id) {
+  const payload = {
+    id,
+    titulo: document.getElementById('senha_titulo')?.value || '',
+    descricao: document.getElementById('senha_descricao')?.value || '',
+    url: document.getElementById('senha_url')?.value || '',
+    login: document.getElementById('senha_login')?.value || '',
+    senha: document.getElementById('senha_senha')?.value || '',
+    categoria: document.getElementById('senha_categoria')?.value || '',
+    grupo: document.getElementById('senha_grupo')?.value || '',
+    status: document.getElementById('senha_status')?.value || 'ativo'
+  };
+  const erros = validarSenhaPayload(payload);
+
+  if (Object.keys(erros).length) {
+    state.passwords.erros = erros;
+    renderCentralSenhas();
+    return;
+  }
+
+  try {
+    state.passwords.erros = {};
+    state.passwords.salvando = true;
+    atualizarBotaoSenha('Salvando...', true, 'is-saving');
+
+    const response = await chamarApi('savePasswordItem', payload);
+
+    if (!response.ok) {
+      throw new Error(obterMensagemApi(response, 'Não foi possível salvar o acesso.'));
+    }
+
+    state.passwords.salvando = false;
+    state.passwords.salvo = true;
+    atualizarBotaoSenha('Salvo', true, 'is-saved');
+    await esperar(650);
+    state.passwords.modalAberto = false;
+    state.passwords.modalId = '';
+    state.passwords.salvo = false;
+    await carregarCentralSenhas();
+  } catch (erro) {
+    state.passwords.salvando = false;
+    state.passwords.salvo = false;
+    atualizarBotaoSenha('Salvar', false, '');
+    state.passwords.message = erro.message || 'Erro ao salvar acesso.';
+    renderCentralSenhas();
+  }
+}
+
+function atualizarBotaoSenha(texto, disabled, classe) {
+  const botao = document.getElementById('senha_salvar');
+
+  if (!botao) return;
+
+  botao.textContent = texto;
+  botao.disabled = disabled;
+  botao.classList.remove('is-saving', 'is-saved');
+
+  if (classe) {
+    botao.classList.add(classe);
+  }
+}
+
+function validarSenhaPayload(payload) {
+  const erros = {};
+
+  if (!String(payload.titulo || '').trim()) {
+    erros.titulo = 'Informe o título.';
+  }
+
+  if (!String(payload.login || '').trim()) {
+    erros.login = 'Informe o login.';
+  }
+
+  if (!String(payload.senha || '').trim()) {
+    erros.senha = 'Informe a senha.';
+  }
+
+  if (payload.url && !/^https?:\/\//i.test(String(payload.url).trim())) {
+    erros.url = 'Use uma URL começando com http:// ou https://.';
+  }
+
+  return erros;
+}
+
 function abrirLink(url) {
   if (!url) return;
   window.open(url, '_blank', 'noopener');
@@ -1176,7 +1469,10 @@ function obterMensagemApi(response, fallback) {
     INVALID_LINK: 'Informe os dados obrigatórios do link.',
     INVALID_URL: 'Informe uma URL começando com http:// ou https://.',
     FAVORITE_LIMIT_REACHED: 'Limite de favoritos atingido.',
-    LINK_NOT_FOUND: 'Link não encontrado.'
+    LINK_NOT_FOUND: 'Link não encontrado.',
+    INVALID_PASSWORD_ITEM: 'Informe o título do acesso.',
+    INVALID_LOGIN: 'Informe o usuário/login.',
+    INVALID_PASSWORD: 'Informe a senha.'
   };
 
   return mensagens[code] || response?.message || response?.error?.message || fallback;
