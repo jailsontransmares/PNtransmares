@@ -891,8 +891,11 @@ function renderLinkItem(item, gestor) {
         <span class="link-group-label">${escapeHtml(item.grupo || 'Sem grupo')}</span>
         <h3>${escapeHtml(item.titulo || 'Link')}</h3>
         <p>${escapeHtml(item.descricao || '')}</p>
-        <a href="${escapeAttr(item.url)}" target="_blank" rel="noopener">Abrir link</a>
-        <small>${escapeHtml(item.categoria || 'Sem categoria')}</small>
+          <div class="link-buttons">
+            <a class="link-sub-btn" href="${escapeAttr(item.url)}" target="_blank" rel="noopener">Abrir</a>
+            <button id="copy_${escapeAttr(item.id)}" class="link-sub-btn" type="button" onclick="copiarLink('${escapeAttr(item.id)}', '${escapeAttr(item.url)}')">Copiar</button>
+          </div>
+          <small>${escapeHtml(item.categoria || 'Sem categoria')}</small>
       </div>
 
       ${gestor ? `
@@ -1014,7 +1017,6 @@ async function salvarLinkItem(id) {
       throw new Error(obterMensagemApi(response, 'Não foi possível salvar o link.'));
     }
 
-    state.links.message = 'Link salvo.';
     state.links.erros = {};
     state.links.salvando = false;
     state.links.salvo = true;
@@ -1030,6 +1032,30 @@ async function salvarLinkItem(id) {
     atualizarBotaoSalvarLink('Salvar', false, '');
     state.links.message = erro.message || 'Erro ao salvar link.';
     renderLinksUteis();
+  }
+}
+
+async function copiarLink(id, url) {
+  const botao = document.getElementById(`copy_${id}`);
+
+  try {
+    await navigator.clipboard.writeText(url);
+
+    if (botao) {
+      botao.textContent = 'Copiado';
+      botao.classList.add('copied');
+      window.setTimeout(() => {
+        botao.textContent = 'Copiar';
+        botao.classList.remove('copied');
+      }, 1400);
+    }
+  } catch (erro) {
+    if (botao) {
+      botao.textContent = 'Erro';
+      window.setTimeout(() => {
+        botao.textContent = 'Copiar';
+      }, 1400);
+    }
   }
 }
 
