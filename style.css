@@ -595,30 +595,36 @@ body.dark .brand h1 {
 .links-list {
   display: grid;
   gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .link-row {
-  align-items: start;
   border: 1px solid var(--borda);
   border-radius: 8px;
-  display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(260px, 1fr) minmax(220px, 0.8fr) auto;
-  padding: 12px;
+  border-bottom: 4px solid var(--cor-destaque);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-height: 132px;
+  padding: 10px;
 }
 
 .link-row.editing {
   background: color-mix(in srgb, var(--cor-principal) 5%, transparent);
 }
 
+.link-row.status-line-inativo {
+  border-bottom-color: #9CA3AF;
+}
+
 .link-main {
   display: grid;
-  gap: 7px;
+  gap: 5px;
   min-width: 0;
 }
 
 .link-main h3 {
-  font-size: 16px;
+  font-size: 14px;
   margin: 0;
 }
 
@@ -631,14 +637,27 @@ body.dark .brand h1 {
 
 .link-main a {
   color: var(--cor-principal);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   text-decoration: none;
+}
+
+.link-main small {
+  color: var(--texto-suave);
+  font-size: 10px;
+}
+
+.link-group-label {
+  color: var(--texto-suave);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .link-meta {
   display: grid;
   gap: 6px;
+  margin-top: auto;
 }
 
 .link-meta span {
@@ -653,6 +672,48 @@ body.dark .brand h1 {
 .link-modal {
   max-width: 520px;
   width: min(520px, 100%);
+}
+
+.field-error {
+  color: #DC2626;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.saving-btn {
+  min-width: 82px;
+  overflow: hidden;
+  position: relative;
+}
+
+.saving-btn.is-saving {
+  background: var(--cor-principal);
+}
+
+.saving-btn.is-saving::after {
+  animation: saving-bar 0.9s linear infinite;
+  background: rgba(255, 255, 255, 0.32);
+  bottom: 0;
+  content: "";
+  height: 3px;
+  left: 0;
+  position: absolute;
+  width: 45%;
+}
+
+.saving-btn.is-saved {
+  background: var(--cor-destaque);
+  border-color: var(--cor-destaque);
+}
+
+@keyframes saving-bar {
+  from {
+    transform: translateX(-110%);
+  }
+
+  to {
+    transform: translateX(240%);
+  }
 }
 
 @media (max-width: 800px) {
@@ -711,7 +772,7 @@ body.dark .brand h1 {
   }
 
   .links-toolbar,
-  .link-row {
+  .links-list {
     grid-template-columns: 1fr;
   }
 }
