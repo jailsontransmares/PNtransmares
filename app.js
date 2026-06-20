@@ -23,6 +23,22 @@ const state = {
     loading: false,
     message: ''
   },
+  links: {
+    escopo: 'corretora',
+    titulo: '',
+    categorias: [],
+    grupos: [],
+    items: [],
+    filtros: {
+      categoria: '',
+      grupo: '',
+      status: ''
+    },
+    editando: '',
+    modalNovo: false,
+    loading: false,
+    message: ''
+  },
   temaAtual: 'claro'
 };
 
@@ -228,6 +244,11 @@ function renderFavoritos() {
 function abrirModulo(id) {
   if (id === 'administracao') {
     abrirAdministracao();
+    return;
+  }
+
+  if (['links-corretora', 'links-ar', 'links-gestao'].indexOf(id) >= 0) {
+    abrirLinksUteis(id);
     return;
   }
 
@@ -732,6 +753,255 @@ async function restaurarCoresPadrao() {
   }
 }
 
+async function abrirLinksUteis(idModulo) {
+  const meta = obterMetaLinks(idModulo);
+  state.links.escopo = meta.escopo;
+  state.links.titulo = meta.titulo;
+  state.links.message = '';
+  state.links.editando = '';
+  state.links.modalNovo = false;
+  await carregarLinksUteis();
+}
+
+function obterMetaLinks(idModulo) {
+  const metas = {
+    'links-ar': {
+      escopo: 'ar',
+      titulo: 'Links Úteis — AR / Certificação'
+    },
+    'links-gestao': {
+      escopo: 'gestao',
+      titulo: 'Links Úteis — Gestão'
+    },
+    'links-corretora': {
+      escopo: 'corretora',
+      titulo: 'Links Úteis — Corretora'
+    }
+  };
+
+  return metas[idModulo] || metas['links-corretora'];
+}
+
+async function carregarLinksUteis() {
+  state.links.loading = true;
+  renderLinksUteis();
+
+  try {
+    const response = await chamarApi('getLinksData', {
+      escopo: state.links.escopo,
+      categoria: state.links.filtros.categoria,
+      grupo: state.links.filtros.grupo,
+      status: state.links.filtros.status
+    });
+
+    if (!response.ok) {
+      throw new Error(obterMensagemApi(response, 'Não foi possível carregar os links.'));
+    }
+
+    state.links.categorias = response.data.categorias || [];
+    state.links.grupos = response.data.grupos || [];
+    state.links.items = response.data.links || [];
+    state.links.loading = false;
+    renderLinksUteis();
+  } catch (erro) {
+    state.links.loading = false;
+    state.links.message = erro.message || 'Erro ao carregar links.';
+    renderLinksUteis();
+  }
+}
+
+function renderLinksUteis() {
+  const gestor = state.usuario?.perfil === 'gestor';
+
+  document.getElementById('app').innerHTML = `
+    <main class="dashboard">
+      <header class="topbar">
+        <div class="brand">
+          <h1>${escapeHtml(state.links.titulo || 'Links Úteis')}</h1>
+          <p>${gestor ? 'Listagem e cadastro de links.' : 'Consulte os links disponíveis.'}</p>
+        </div>
+
+        <div class="admin-actions">
+          <button class="secondary-btn" type="button" onclick="renderDashboard()">Voltar</button>
+        </div>
+      </header>
+
+      <section class="admin-panel">
+        <div class="links-toolbar">
+          <select class="config-input" onchange="alterarFiltroLinks('categoria', this.value)">
+            <option value="">Todas as categorias</option>
+            ${state.links.categorias.map(item => `<option value="${escapeAttr(item.nome)}" ${state.links.filtros.categoria === item.nome ? 'selected' : ''}>${escapeHtml(item.nome)}</option>`).join('')}
+          </select>
+
+          <select class="config-input" onchange="alterarFiltroLinks('grupo', this.value)">
+            <option value="">Todos os grupos</option>
+            ${state.links.grupos.map(item => `<option value="${escapeAttr(item.nome)}" ${state.links.filtros.grupo === item.nome ? 'selected' : ''}>${escapeHtml(item.nome)}</option>`).join('')}
+          </select>
+
+          ${gestor ? `
+            <select class="config-input" onchange="alterarFiltroLinks('status', this.value)">
+              <option value="">Todos os status</option>
+              <option value="ativo" ${state.links.filtros.status === 'ativo' ? 'selected' : ''}>ativos</option>
+              <option value="inativo" ${state.links.filtros.status === 'inativo' ? 'selected' : ''}>inativos</option>
+            </select>
+            <button class="add-small-btn" type="button" onclick="abrirModalNovoLink()">+ Adicionar</button>
+          ` : ''}
+        </div>
+
+        ${state.links.message ? `<p class="admin-message">${escapeHtml(state.links.message)}</p>` : ''}
+        ${state.links.loading ? '<p class="quick-link-empty">Carregando links...</p>' : renderListaLinksUteis(gestor)}
+        ${renderModalNovoLink()}
+      </section>
+    </main>
+  `;
+}
+
+function renderListaLinksUteis(gestor) {
+  if (!state.links.items.length) {
+    return '<p class="quick-link-empty">Nenhum link cadastrado.</p>';
+  }
+
+  return `
+    <div class="links-list">
+      ${state.links.items.map(item => renderLinkItem(item, gestor)).join('')}
+    </div>
+  `;
+}
+
+function renderLinkItem(item, gestor) {
+  const editando = state.links.editando === item.id;
+
+  return `
+    <article class="link-row ${editando ? 'editing' : ''}">
+      <div class="link-main">
+        ${gestor && editando ? `
+          <input id="link_${escapeAttr(item.id)}_titulo" class="config-input" type="text" value="${escapeAttr(item.titulo)}">
+          <input id="link_${escapeAttr(item.id)}_descricao" class="config-input" type="text" value="${escapeAttr(item.descricao)}">
+          <input id="link_${escapeAttr(item.id)}_url" class="config-input" type="url" value="${escapeAttr(item.url)}">
+        ` : `
+          <h3>${escapeHtml(item.titulo || 'Link')}</h3>
+          <p>${escapeHtml(item.descricao || '')}</p>
+          <a href="${escapeAttr(item.url)}" target="_blank" rel="noopener">Abrir link</a>
+        `}
+      </div>
+
+      <div class="link-meta">
+        ${gestor && editando ? renderLinkSelects(item) : `
+          <span>${escapeHtml(item.categoria || 'Sem categoria')}</span>
+          <span>${escapeHtml(item.grupo || 'Sem grupo')}</span>
+          <span>${escapeHtml(item.status || '')}</span>
+        `}
+      </div>
+
+      ${gestor ? `
+        <div class="crud-actions">
+          ${editando
+            ? `<button class="save-btn" type="button" onclick="salvarLinkItem('${escapeAttr(item.id)}')">Salvar</button>`
+            : `<button class="icon-btn" type="button" onclick="editarLinkItem('${escapeAttr(item.id)}')" title="Editar" aria-label="Editar link">✎</button>`
+          }
+        </div>
+      ` : ''}
+    </article>
+  `;
+}
+
+function renderLinkSelects(item) {
+  return `
+    <select id="link_${escapeAttr(item.id)}_categoria" class="config-input">
+      <option value="">Sem categoria</option>
+      ${state.links.categorias.map(categoria => `<option value="${escapeAttr(categoria.nome)}" ${item.categoria === categoria.nome ? 'selected' : ''}>${escapeHtml(categoria.nome)}</option>`).join('')}
+    </select>
+    <select id="link_${escapeAttr(item.id)}_grupo" class="config-input">
+      <option value="">Sem grupo</option>
+      ${state.links.grupos.map(grupo => `<option value="${escapeAttr(grupo.nome)}" ${item.grupo === grupo.nome ? 'selected' : ''}>${escapeHtml(grupo.nome)}</option>`).join('')}
+    </select>
+    <select id="link_${escapeAttr(item.id)}_status" class="config-input">
+      <option value="ativo" ${item.status === 'ativo' ? 'selected' : ''}>ativo</option>
+      <option value="inativo" ${item.status === 'inativo' ? 'selected' : ''}>inativo</option>
+    </select>
+  `;
+}
+
+function renderModalNovoLink() {
+  if (!state.links.modalNovo) {
+    return '';
+  }
+
+  return `
+    <div class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Adicionar link">
+      <section class="small-modal link-modal">
+        <div class="small-modal-header">
+          <h3>Adicionar link</h3>
+          <button class="icon-btn" type="button" onclick="fecharModalNovoLink()" title="Fechar" aria-label="Fechar">×</button>
+        </div>
+
+        <label><span>Título</span><input id="novo_link_titulo" class="config-input" type="text"></label>
+        <label><span>Descrição</span><input id="novo_link_descricao" class="config-input" type="text"></label>
+        <label><span>URL</span><input id="novo_link_url" class="config-input" type="url" placeholder="https://"></label>
+        <label><span>Categoria</span><select id="novo_link_categoria" class="config-input"><option value="">Sem categoria</option>${state.links.categorias.map(item => `<option value="${escapeAttr(item.nome)}">${escapeHtml(item.nome)}</option>`).join('')}</select></label>
+        <label><span>Grupo</span><select id="novo_link_grupo" class="config-input"><option value="">Sem grupo</option>${state.links.grupos.map(item => `<option value="${escapeAttr(item.nome)}">${escapeHtml(item.nome)}</option>`).join('')}</select></label>
+        <label><span>Status</span><select id="novo_link_status" class="config-input"><option value="ativo">ativo</option><option value="inativo">inativo</option></select></label>
+
+        <div class="small-modal-actions">
+          <button class="secondary-btn" type="button" onclick="fecharModalNovoLink()">Cancelar</button>
+          <button class="save-btn" type="button" onclick="salvarLinkItem('')">Salvar</button>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function alterarFiltroLinks(chave, valor) {
+  state.links.filtros[chave] = valor;
+  carregarLinksUteis();
+}
+
+function editarLinkItem(id) {
+  state.links.editando = id;
+  renderLinksUteis();
+}
+
+function abrirModalNovoLink() {
+  state.links.modalNovo = true;
+  renderLinksUteis();
+}
+
+function fecharModalNovoLink() {
+  state.links.modalNovo = false;
+  renderLinksUteis();
+}
+
+async function salvarLinkItem(id) {
+  const novo = !id;
+  const prefixo = novo ? 'novo_link' : `link_${id}`;
+  const payload = {
+    id,
+    escopo: state.links.escopo,
+    titulo: document.getElementById(`${prefixo}_titulo`)?.value || '',
+    descricao: document.getElementById(`${prefixo}_descricao`)?.value || '',
+    url: document.getElementById(`${prefixo}_url`)?.value || '',
+    categoria: document.getElementById(`${prefixo}_categoria`)?.value || '',
+    grupo: document.getElementById(`${prefixo}_grupo`)?.value || '',
+    status: document.getElementById(`${prefixo}_status`)?.value || 'ativo'
+  };
+
+  try {
+    const response = await chamarApi('saveLinkItem', payload);
+
+    if (!response.ok) {
+      throw new Error(obterMensagemApi(response, 'Não foi possível salvar o link.'));
+    }
+
+    state.links.message = 'Link salvo.';
+    state.links.editando = '';
+    state.links.modalNovo = false;
+    await carregarLinksUteis();
+  } catch (erro) {
+    state.links.message = erro.message || 'Erro ao salvar link.';
+    renderLinksUteis();
+  }
+}
+
 function abrirLink(url) {
   if (!url) return;
   window.open(url, '_blank', 'noopener');
@@ -761,7 +1031,9 @@ function obterMensagemApi(response, fallback) {
     ACTION_NOT_FOUND: 'Ação não reconhecida pela API publicada.',
     CONFIG_NOT_ALLOWED: 'Esta configuração não pode ser alterada manualmente.',
     INVALID_RECORD: 'Informe os dados obrigatórios.',
-    INVALID_STATUS: 'Status inválido.'
+    INVALID_STATUS: 'Status inválido.',
+    INVALID_LINK: 'Informe os dados obrigatórios do link.',
+    INVALID_URL: 'Informe uma URL começando com http:// ou https://.'
   };
 
   return mensagens[code] || response?.message || response?.error?.message || fallback;
