@@ -297,9 +297,20 @@ function renderConfigAdmin() {
     return '<p class="quick-link-empty">Nenhuma configuração encontrada.</p>';
   }
 
+  const grupos = agruparConfiguracoes(state.admin.config);
+
   return `
-    <div class="config-list">
-      ${state.admin.config.map(item => renderConfigItem(item)).join('')}
+    <div class="config-groups">
+      ${grupos.map(grupo => `
+        <section class="config-group">
+          <div class="config-group-header">
+            <h3>${escapeHtml(grupo.titulo)}</h3>
+          </div>
+          <div class="config-list">
+            ${grupo.itens.map(item => renderConfigItem(item)).join('')}
+          </div>
+        </section>
+      `).join('')}
     </div>
   `;
 }
@@ -312,7 +323,7 @@ function renderConfigItem(item) {
   return `
     <article class="config-row">
       <div class="config-info">
-        <strong>${escapeHtml(item.chave)}</strong>
+        <strong>${escapeHtml(obterRotuloConfig(item.chave))}</strong>
         <span>${escapeHtml(item.descricao || '')}</span>
       </div>
 
@@ -322,6 +333,63 @@ function renderConfigItem(item) {
       </div>
     </article>
   `;
+}
+
+function agruparConfiguracoes(configs) {
+  const definicoes = [
+    {
+      id: 'identidade',
+      titulo: 'Identidade',
+      chaves: ['nome_sistema', 'subtitulo_sistema']
+    },
+    {
+      id: 'visual',
+      titulo: 'Visual',
+      chaves: ['cor_principal', 'cor_secundaria', 'cor_destaque', 'modo_visual_padrao']
+    },
+    {
+      id: 'logo',
+      titulo: 'Logo e Arquivos',
+      chaves: ['exibir_logo', 'logo_file_id', 'logo_url', 'drive_folder_name', 'drive_folder_id']
+    },
+    {
+      id: 'limites',
+      titulo: 'Limites do Painel',
+      chaves: ['limite_favoritos', 'limite_avisos', 'janela_aniversarios_dias', 'limite_aniversariantes', 'retencao_historico_meses']
+    }
+  ];
+  const porChave = configs.reduce((acc, item) => {
+    acc[item.chave] = item;
+    return acc;
+  }, {});
+
+  return definicoes.map(grupo => ({
+    ...grupo,
+    itens: grupo.chaves.map(chave => porChave[chave]).filter(Boolean)
+  })).filter(grupo => grupo.itens.length);
+}
+
+function obterRotuloConfig(chave) {
+  const rotulos = {
+    nome_sistema: 'Nome do sistema',
+    subtitulo_sistema: 'Subtítulo',
+    cor_principal: 'Cor principal',
+    cor_secundaria: 'Cor secundária',
+    cor_destaque: 'Cor de destaque',
+    modo_visual_padrao: 'Modo visual padrão',
+    exibir_logo: 'Exibir logo',
+    logo_file_id: 'Arquivo da logo',
+    logo_url: 'URL da logo',
+    drive_folder_id: 'Pasta do Drive',
+    drive_folder_name: 'Nome da pasta',
+    limite_favoritos: 'Links rápidos',
+    retencao_historico_meses: 'Retenção do histórico',
+    janela_aniversarios_dias: 'Janela de aniversários',
+    limite_aniversariantes: 'Máximo de aniversariantes',
+    limite_avisos: 'Máximo de avisos'
+  };
+
+  return rotulos[chave] || chave;
 }
 
 function renderConfigInput(item, inputId, disabled) {
