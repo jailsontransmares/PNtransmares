@@ -36,6 +36,9 @@ const state = {
     },
     editando: '',
     modalNovo: false,
+    erros: {},
+    salvando: false,
+    salvo: false,
     loading: false,
     message: ''
   },
@@ -286,13 +289,14 @@ async function abrirAdministracao(preservarMensagem = false) {
 
 function renderAdministracao() {
   const nomeSistema = state.config?.nome_sistema || 'PAINEL TRANSMARES';
+  const subtitulo = state.config?.subtitulo_sistema || 'Central operacional da Transmares Corretora de Seguros';
 
   document.getElementById('app').innerHTML = `
     <main class="dashboard">
       <header class="topbar">
         <div class="brand">
           <h1>${escapeHtml(nomeSistema)}</h1>
-          <p>Administração</p>
+          <p>${escapeHtml(subtitulo)}</p>
         </div>
 
         <div class="admin-actions">
@@ -812,13 +816,15 @@ async function carregarLinksUteis() {
 
 function renderLinksUteis() {
   const gestor = state.usuario?.perfil === 'gestor';
+  const nomeSistema = state.config?.nome_sistema || 'PAINEL TRANSMARES';
+  const subtitulo = state.config?.subtitulo_sistema || 'Central operacional da Transmares Corretora de Seguros';
 
   document.getElementById('app').innerHTML = `
     <main class="dashboard">
       <header class="topbar">
         <div class="brand">
-          <h1>${escapeHtml(state.links.titulo || 'Links Úteis')}</h1>
-          <p>${gestor ? 'Listagem e cadastro de links.' : 'Consulte os links disponíveis.'}</p>
+          <h1>${escapeHtml(nomeSistema)}</h1>
+          <p>${escapeHtml(subtitulo)}</p>
         </div>
 
         <div class="admin-actions">
@@ -827,6 +833,13 @@ function renderLinksUteis() {
       </header>
 
       <section class="admin-panel">
+        <div class="admin-panel-header">
+          <div>
+            <h2>${escapeHtml(state.links.titulo || 'Links Úteis')}</h2>
+            <p>${gestor ? 'Listagem e cadastro de links.' : 'Consulte os links disponíveis.'}</p>
+          </div>
+        </div>
+
         <div class="links-toolbar">
           <select class="config-input" onchange="alterarFiltroLinks('categoria', this.value)">
             <option value="">Todas as categorias</option>
@@ -872,25 +885,23 @@ function renderLinkItem(item, gestor) {
   const editando = state.links.editando === item.id;
 
   return `
-    <article class="link-row ${editando ? 'editing' : ''}">
+    <article class="link-row ${editando ? 'editing' : ''} status-line-${escapeAttr(item.status || 'inativo')}">
       <div class="link-main">
         ${gestor && editando ? `
           <input id="link_${escapeAttr(item.id)}_titulo" class="config-input" type="text" value="${escapeAttr(item.titulo)}">
           <input id="link_${escapeAttr(item.id)}_descricao" class="config-input" type="text" value="${escapeAttr(item.descricao)}">
           <input id="link_${escapeAttr(item.id)}_url" class="config-input" type="url" value="${escapeAttr(item.url)}">
         ` : `
+          <span class="link-group-label">${escapeHtml(item.grupo || 'Sem grupo')}</span>
           <h3>${escapeHtml(item.titulo || 'Link')}</h3>
           <p>${escapeHtml(item.descricao || '')}</p>
           <a href="${escapeAttr(item.url)}" target="_blank" rel="noopener">Abrir link</a>
+          <small>${escapeHtml(item.categoria || 'Sem categoria')}</small>
         `}
       </div>
 
       <div class="link-meta">
-        ${gestor && editando ? renderLinkSelects(item) : `
-          <span>${escapeHtml(item.categoria || 'Sem categoria')}</span>
-          <span>${escapeHtml(item.grupo || 'Sem grupo')}</span>
-          <span>${escapeHtml(item.status || '')}</span>
-        `}
+        ${gestor && editando ? renderLinkSelects(item) : ''}
       </div>
 
       ${gestor ? `
@@ -926,6 +937,8 @@ function renderModalNovoLink() {
   if (!state.links.modalNovo) {
     return '';
   }
+  const erros = state.links.erros || {};
+  const botaoTexto = state.links.salvo ? 'Salvo' : (state.links.salvando ? 'Salvando...' : 'Salvar');
 
   return `
     <div class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Adicionar link">
@@ -935,20 +948,24 @@ function renderModalNovoLink() {
           <button class="icon-btn" type="button" onclick="fecharModalNovoLink()" title="Fechar" aria-label="Fechar">×</button>
         </div>
 
-        <label><span>Título</span><input id="novo_link_titulo" class="config-input" type="text"></label>
+        <label><span>Título</span><input id="novo_link_titulo" class="config-input" type="text">${renderErroCampo(erros.titulo)}</label>
         <label><span>Descrição</span><input id="novo_link_descricao" class="config-input" type="text"></label>
-        <label><span>URL</span><input id="novo_link_url" class="config-input" type="url" placeholder="https://"></label>
+        <label><span>URL</span><input id="novo_link_url" class="config-input" type="url" placeholder="https://">${renderErroCampo(erros.url)}</label>
         <label><span>Categoria</span><select id="novo_link_categoria" class="config-input"><option value="">Sem categoria</option>${state.links.categorias.map(item => `<option value="${escapeAttr(item.nome)}">${escapeHtml(item.nome)}</option>`).join('')}</select></label>
         <label><span>Grupo</span><select id="novo_link_grupo" class="config-input"><option value="">Sem grupo</option>${state.links.grupos.map(item => `<option value="${escapeAttr(item.nome)}">${escapeHtml(item.nome)}</option>`).join('')}</select></label>
         <label><span>Status</span><select id="novo_link_status" class="config-input"><option value="ativo">ativo</option><option value="inativo">inativo</option></select></label>
 
         <div class="small-modal-actions">
           <button class="secondary-btn" type="button" onclick="fecharModalNovoLink()">Cancelar</button>
-          <button class="save-btn" type="button" onclick="salvarLinkItem('')">Salvar</button>
+          <button id="novo_link_salvar" class="save-btn saving-btn ${state.links.salvando ? 'is-saving' : ''} ${state.links.salvo ? 'is-saved' : ''}" type="button" onclick="salvarLinkItem('')" ${state.links.salvando ? 'disabled' : ''}>${botaoTexto}</button>
         </div>
       </section>
     </div>
   `;
+}
+
+function renderErroCampo(mensagem) {
+  return mensagem ? `<small class="field-error">${escapeHtml(mensagem)}</small>` : '';
 }
 
 function alterarFiltroLinks(chave, valor) {
@@ -963,11 +980,17 @@ function editarLinkItem(id) {
 
 function abrirModalNovoLink() {
   state.links.modalNovo = true;
+  state.links.erros = {};
+  state.links.salvando = false;
+  state.links.salvo = false;
   renderLinksUteis();
 }
 
 function fecharModalNovoLink() {
   state.links.modalNovo = false;
+  state.links.erros = {};
+  state.links.salvando = false;
+  state.links.salvo = false;
   renderLinksUteis();
 }
 
@@ -984,8 +1007,24 @@ async function salvarLinkItem(id) {
     grupo: document.getElementById(`${prefixo}_grupo`)?.value || '',
     status: document.getElementById(`${prefixo}_status`)?.value || 'ativo'
   };
+  const erros = validarLinkPayload(payload);
+
+  if (novo && Object.keys(erros).length) {
+    state.links.erros = erros;
+    state.links.salvando = false;
+    state.links.salvo = false;
+    renderLinksUteis();
+    return;
+  }
 
   try {
+    if (novo) {
+      state.links.erros = {};
+      state.links.salvando = true;
+      state.links.salvo = false;
+      atualizarBotaoSalvarLink('Salvando...', true, 'is-saving');
+    }
+
     const response = await chamarApi('saveLinkItem', payload);
 
     if (!response.ok) {
@@ -994,12 +1033,55 @@ async function salvarLinkItem(id) {
 
     state.links.message = 'Link salvo.';
     state.links.editando = '';
+    state.links.erros = {};
+    state.links.salvando = false;
+    state.links.salvo = true;
+    atualizarBotaoSalvarLink('Salvo', true, 'is-saved');
+    await esperar(650);
     state.links.modalNovo = false;
+    state.links.salvo = false;
     await carregarLinksUteis();
   } catch (erro) {
+    state.links.salvando = false;
+    state.links.salvo = false;
+    atualizarBotaoSalvarLink('Salvar', false, '');
     state.links.message = erro.message || 'Erro ao salvar link.';
     renderLinksUteis();
   }
+}
+
+function atualizarBotaoSalvarLink(texto, disabled, classe) {
+  const botao = document.getElementById('novo_link_salvar');
+
+  if (!botao) {
+    return;
+  }
+
+  botao.textContent = texto;
+  botao.disabled = disabled;
+  botao.classList.remove('is-saving', 'is-saved');
+
+  if (classe) {
+    botao.classList.add(classe);
+  }
+}
+
+function validarLinkPayload(payload) {
+  const erros = {};
+
+  if (!String(payload.titulo || '').trim()) {
+    erros.titulo = 'Informe o título do link.';
+  }
+
+  if (!/^https?:\/\//i.test(String(payload.url || '').trim())) {
+    erros.url = 'Use uma URL começando com http:// ou https://.';
+  }
+
+  return erros;
+}
+
+function esperar(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function abrirLink(url) {
