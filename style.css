@@ -422,6 +422,36 @@ body.dark .brand h1 {
   padding: 4px;
 }
 
+.crud-create,
+.crud-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(220px, 1.2fr) 110px auto;
+}
+
+.crud-create {
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  padding: 10px;
+}
+
+.crud-list {
+  display: grid;
+  gap: 8px;
+}
+
+.crud-row {
+  border-bottom: 1px solid var(--borda);
+  padding: 0 0 8px;
+}
+
+.crud-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
 @media (max-width: 800px) {
   #app {
     padding: 14px;
@@ -461,6 +491,11 @@ body.dark .brand h1 {
   }
 
   .config-control {
+    grid-template-columns: 1fr;
+  }
+
+  .crud-create,
+  .crud-row {
     grid-template-columns: 1fr;
   }
 }
