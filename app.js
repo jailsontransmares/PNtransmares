@@ -107,8 +107,8 @@ function renderDashboard() {
           Perfil: ${escapeHtml(state.usuario.perfil || '')}
 
           <br>
-          <button class="theme-btn" onclick="alternarTema()">
-            ${state.temaAtual === 'escuro' ? '☀️ Modo claro' : '🌙 Modo escuro'}
+          <button class="theme-btn icon-only" onclick="alternarTema()" title="${state.temaAtual === 'escuro' ? 'Ativar modo claro' : 'Ativar modo escuro'}" aria-label="${state.temaAtual === 'escuro' ? 'Ativar modo claro' : 'Ativar modo escuro'}">
+            ${state.temaAtual === 'escuro' ? '☀️' : '🌙'}
           </button>
         </div>
       </header>
