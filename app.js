@@ -19,6 +19,7 @@ const state = {
       categorias: '',
       grupos: ''
     },
+    modalNovo: '',
     loading: false,
     message: ''
   },
@@ -450,18 +451,10 @@ function renderCrudAdmin(entidade, titulo, subtitulo) {
         ${renderFiltroAdmin(entidade, 'inativo', 'Inativos')}
       </div>
 
-      <section class="crud-create">
-        <strong class="crud-create-title">Adicionar novo</strong>
-        <input id="${entidade}_novo_nome" class="config-input" type="text" placeholder="Nome">
-        <input id="${entidade}_novo_descricao" class="config-input" type="text" placeholder="Descrição">
-        <select id="${entidade}_novo_status" class="config-input">
-          <option value="ativo">ativo</option>
-          <option value="inativo">inativo</option>
-        </select>
-        <button class="save-btn" type="button" onclick="salvarRegistroAdmin('${entidade}', '')">Adicionar</button>
-      </section>
+      <button class="add-small-btn" type="button" onclick="abrirModalNovoRegistro('${entidade}')">+ Adicionar</button>
 
       ${state.admin.loading ? '<p class="quick-link-empty">Carregando registros...</p>' : renderRegistrosAdmin(entidade, records)}
+      ${renderModalNovoRegistro(entidade)}
     </section>
   `;
 }
@@ -518,6 +511,56 @@ function renderFiltroAdmin(entidade, filtro, label) {
       ${escapeHtml(label)}
     </button>
   `;
+}
+
+function renderModalNovoRegistro(entidade) {
+  if (state.admin.modalNovo !== entidade) {
+    return '';
+  }
+
+  return `
+    <div class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Adicionar registro">
+      <section class="small-modal">
+        <div class="small-modal-header">
+          <h3>Adicionar ${entidade === 'categorias' ? 'categoria' : 'grupo'}</h3>
+          <button class="icon-btn" type="button" onclick="fecharModalNovoRegistro()" title="Fechar" aria-label="Fechar">×</button>
+        </div>
+
+        <label>
+          <span>Nome</span>
+          <input id="${entidade}_novo_nome" class="config-input" type="text">
+        </label>
+
+        <label>
+          <span>Descrição</span>
+          <input id="${entidade}_novo_descricao" class="config-input" type="text">
+        </label>
+
+        <label>
+          <span>Status</span>
+          <select id="${entidade}_novo_status" class="config-input">
+            <option value="ativo">ativo</option>
+            <option value="inativo">inativo</option>
+          </select>
+        </label>
+
+        <div class="small-modal-actions">
+          <button class="secondary-btn" type="button" onclick="fecharModalNovoRegistro()">Cancelar</button>
+          <button class="save-btn" type="button" onclick="salvarRegistroAdmin('${entidade}', '')">Salvar</button>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function abrirModalNovoRegistro(entidade) {
+  state.admin.modalNovo = entidade;
+  renderAdministracao();
+}
+
+function fecharModalNovoRegistro() {
+  state.admin.modalNovo = '';
+  renderAdministracao();
 }
 
 function obterResumoRegistros(records) {
@@ -604,6 +647,7 @@ async function salvarRegistroAdmin(entidade, id) {
 
     state.admin.message = 'Registro salvo.';
     state.admin.editando[entidade] = '';
+    state.admin.modalNovo = '';
     await carregarRegistrosAdmin(entidade);
   } catch (erro) {
     state.admin.message = erro.message || 'Erro ao salvar registro.';
