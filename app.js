@@ -11,6 +11,14 @@ const state = {
     config: [],
     categorias: [],
     grupos: [],
+    filtros: {
+      categorias: 'todos',
+      grupos: 'todos'
+    },
+    editando: {
+      categorias: '',
+      grupos: ''
+    },
     loading: false,
     message: ''
   },
@@ -423,19 +431,27 @@ function obterRotuloConfig(chave) {
 
 function renderCrudAdmin(entidade, titulo, subtitulo) {
   const records = state.admin[entidade] || [];
+  const resumo = obterResumoRegistros(records);
 
   return `
     <section class="admin-panel">
       <div class="admin-panel-header">
         <div>
           <h2>${escapeHtml(titulo)}</h2>
-          <p>${escapeHtml(subtitulo)}</p>
+          <p>${escapeHtml(subtitulo)} ${resumo.total} registros · ${resumo.ativos} ativos · ${resumo.inativos} inativos</p>
         </div>
       </div>
 
       ${state.admin.message ? `<p class="admin-message">${escapeHtml(state.admin.message)}</p>` : ''}
 
+      <div class="crud-filters" role="group" aria-label="Filtro de status">
+        ${renderFiltroAdmin(entidade, 'todos', 'Todos')}
+        ${renderFiltroAdmin(entidade, 'ativo', 'Ativos')}
+        ${renderFiltroAdmin(entidade, 'inativo', 'Inativos')}
+      </div>
+
       <section class="crud-create">
+        <strong class="crud-create-title">Adicionar novo</strong>
         <input id="${entidade}_novo_nome" class="config-input" type="text" placeholder="Nome">
         <input id="${entidade}_novo_descricao" class="config-input" type="text" placeholder="Descrição">
         <select id="${entidade}_novo_status" class="config-input">
@@ -451,13 +467,21 @@ function renderCrudAdmin(entidade, titulo, subtitulo) {
 }
 
 function renderRegistrosAdmin(entidade, records) {
-  if (!records.length) {
+  const filtrados = filtrarRegistrosAdmin(entidade, records);
+
+  if (!filtrados.length) {
     return '<p class="quick-link-empty">Nenhum registro cadastrado.</p>';
   }
 
   return `
     <div class="crud-list">
-      ${records.map(record => renderRegistroAdmin(entidade, record)).join('')}
+      <div class="crud-header">
+        <span>Nome</span>
+        <span>Descrição</span>
+        <span>Status</span>
+        <span>Ação</span>
+      </div>
+      ${filtrados.map(record => renderRegistroAdmin(entidade, record)).join('')}
     </div>
   `;
 }
@@ -465,18 +489,74 @@ function renderRegistrosAdmin(entidade, records) {
 function renderRegistroAdmin(entidade, record) {
   const id = escapeAttr(record.id || '');
   const prefixo = `${entidade}_${id}`;
+  const editando = state.admin.editando[entidade] === record.id;
+  const disabled = editando ? '' : 'disabled';
 
   return `
-    <article class="crud-row">
-      <input id="${prefixo}_nome" class="config-input" type="text" value="${escapeAttr(record.nome || '')}" placeholder="Nome">
-      <input id="${prefixo}_descricao" class="config-input" type="text" value="${escapeAttr(record.descricao || '')}" placeholder="Descrição">
-      <select id="${prefixo}_status" class="config-input">
+    <article class="crud-row ${editando ? 'editing' : ''}">
+      <input id="${prefixo}_nome" class="config-input" type="text" value="${escapeAttr(record.nome || '')}" placeholder="Nome" ${disabled}>
+      <input id="${prefixo}_descricao" class="config-input" type="text" value="${escapeAttr(record.descricao || '')}" placeholder="Descrição" ${disabled}>
+      <select id="${prefixo}_status" class="config-input status-${escapeAttr(record.status || 'inativo')}" ${disabled}>
         <option value="ativo" ${record.status === 'ativo' ? 'selected' : ''}>ativo</option>
         <option value="inativo" ${record.status === 'inativo' ? 'selected' : ''}>inativo</option>
       </select>
-      <button class="save-btn" type="button" onclick="salvarRegistroAdmin('${entidade}', '${id}')">Salvar</button>
+      <div class="crud-actions">
+        ${editando
+          ? `<button class="save-btn" type="button" onclick="salvarRegistroAdmin('${entidade}', '${id}')">Salvar</button>`
+          : `<button class="icon-btn" type="button" onclick="editarRegistroAdmin('${entidade}', '${id}')" title="Editar" aria-label="Editar ${escapeAttr(record.nome || 'registro')}">✎</button>`
+        }
+      </div>
     </article>
   `;
+}
+
+function renderFiltroAdmin(entidade, filtro, label) {
+  const ativo = state.admin.filtros[entidade] === filtro;
+
+  return `
+    <button class="filter-btn ${ativo ? 'active' : ''}" type="button" onclick="filtrarAdmin('${entidade}', '${filtro}')">
+      ${escapeHtml(label)}
+    </button>
+  `;
+}
+
+function obterResumoRegistros(records) {
+  return records.reduce((acc, record) => {
+    acc.total += 1;
+
+    if (record.status === 'ativo') {
+      acc.ativos += 1;
+    } else {
+      acc.inativos += 1;
+    }
+
+    return acc;
+  }, {
+    total: 0,
+    ativos: 0,
+    inativos: 0
+  });
+}
+
+function filtrarRegistrosAdmin(entidade, records) {
+  const filtro = state.admin.filtros[entidade] || 'todos';
+
+  if (filtro === 'todos') {
+    return records;
+  }
+
+  return records.filter(record => record.status === filtro);
+}
+
+function filtrarAdmin(entidade, filtro) {
+  state.admin.filtros[entidade] = filtro;
+  state.admin.editando[entidade] = '';
+  renderAdministracao();
+}
+
+function editarRegistroAdmin(entidade, id) {
+  state.admin.editando[entidade] = id;
+  renderAdministracao();
 }
 
 async function carregarRegistrosAdmin(entidade) {
@@ -493,6 +573,7 @@ async function carregarRegistrosAdmin(entidade) {
     }
 
     state.admin[entidade] = response.data.records || [];
+    state.admin.editando[entidade] = '';
     state.admin.loading = false;
     renderAdministracao();
   } catch (erro) {
@@ -522,6 +603,7 @@ async function salvarRegistroAdmin(entidade, id) {
     }
 
     state.admin.message = 'Registro salvo.';
+    state.admin.editando[entidade] = '';
     await carregarRegistrosAdmin(entidade);
   } catch (erro) {
     state.admin.message = erro.message || 'Erro ao salvar registro.';
