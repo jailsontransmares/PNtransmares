@@ -211,15 +211,22 @@ function getInitialData() {
   const config = obterConfig();
   const usuario = obterUsuarioAutorizado_();
   const pasta = garantirPastaSistemaDrive();
+  const limites = obterLimitesConfig_(config);
+  const modoVisualEfetivo = usuario.preferencia_modo_visual || config.modo_visual_padrao || 'claro';
 
   return sucesso_('getInitialData', {
     usuario,
     config,
     drive: pasta.data,
+    meta: {
+      perfil: usuario.perfil,
+      modo_visual_efetivo: modoVisualEfetivo,
+      limites
+    },
     cards: obterCardsPorPerfil_(usuario.perfil),
-    avisos: [],
-    aniversariantes: [],
-    favoritos: []
+    avisos: obterAvisosIniciais_(config),
+    aniversariantes: obterAniversariantesIniciais_(config),
+    favoritos: obterFavoritosIniciais_(usuario, config)
   });
 }
 
@@ -565,6 +572,131 @@ function obterCardsPorPerfil_(perfil) {
   return cards;
 }
 
+function obterAvisosIniciais_(config) {
+  const sheet = obterPlanilha_().getSheetByName('Avisos_Internos');
+  const limite = obterNumeroConfig_(config, 'limite_avisos', 3);
+
+  if (!sheet || limite <= 0) {
+    return [];
+  }
+
+  const hoje = inicioDoDia_(new Date());
+  const avisos = lerAbaComoObjetos_(sheet).filter(function(aviso) {
+    if (normalizar_(aviso.status) !== 'ativo') {
+      return false;
+    }
+
+    const inicio = converterData_(aviso.data_inicio);
+    const fim = converterData_(aviso.data_fim);
+
+    if (inicio && inicioDoDia_(inicio) > hoje) {
+      return false;
+    }
+
+    if (fim && inicioDoDia_(fim) < hoje) {
+      return false;
+    }
+
+    return true;
+  }).sort(function(a, b) {
+    const dataA = converterData_(a.data_inicio) || converterData_(a.data_cadastro) || new Date(0);
+    const dataB = converterData_(b.data_inicio) || converterData_(b.data_cadastro) || new Date(0);
+    return dataB.getTime() - dataA.getTime();
+  }).slice(0, limite);
+
+  return avisos.map(function(aviso) {
+    return {
+      id: aviso.id_aviso || '',
+      titulo: aviso.titulo || 'Aviso',
+      mensagem: aviso.mensagem || '',
+      data_inicio: formatarData_(aviso.data_inicio),
+      data_fim: formatarData_(aviso.data_fim)
+    };
+  });
+}
+
+function obterAniversariantesIniciais_(config) {
+  const sheet = obterPlanilha_().getSheetByName('Aniversarios');
+  const janelaDias = obterNumeroConfig_(config, 'janela_aniversarios_dias', 15);
+  const limite = obterNumeroConfig_(config, 'limite_aniversariantes', 25);
+
+  if (!sheet || janelaDias <= 0 || limite <= 0) {
+    return [];
+  }
+
+  const hoje = inicioDoDia_(new Date());
+
+  return lerAbaComoObjetos_(sheet).map(function(item) {
+    const aniversario = calcularProximoAniversario_(item.data_nascimento, hoje);
+
+    if (!aniversario || normalizar_(item.status) !== 'ativo') {
+      return null;
+    }
+
+    return {
+      id: item.id_aniversario || '',
+      nome: item.nome || '',
+      tipo: item.tipo || '',
+      data: aniversario.dataFormatada,
+      dias_ate: aniversario.diasAte,
+      observacao: item.observacao || ''
+    };
+  }).filter(function(item) {
+    return item && item.nome && item.dias_ate >= 0 && item.dias_ate <= janelaDias;
+  }).sort(function(a, b) {
+    return a.dias_ate - b.dias_ate || String(a.nome).localeCompare(String(b.nome));
+  }).slice(0, limite);
+}
+
+function obterFavoritosIniciais_(usuario, config) {
+  const sheet = obterPlanilha_().getSheetByName('Itens');
+  const limite = obterNumeroConfig_(config, 'limite_favoritos', 5);
+
+  if (!sheet || limite <= 0) {
+    return [];
+  }
+
+  const emailUsuario = normalizar_(usuario.email);
+  const favoritos = lerAbaComoObjetos_(sheet).filter(function(item) {
+    const statusAtivo = normalizar_(item.status) === 'ativo';
+    const tipo = normalizar_(item.tipo);
+    const usuarioItem = normalizar_(item.usuario_email || item.email_usuario || item.criado_por);
+    const marcadoComoFavorito = ['favorito', 'favoritos', 'link_rapido', 'links_rapidos'].indexOf(tipo) >= 0;
+    const pertenceAoUsuario = !usuarioItem || usuarioItem === emailUsuario;
+
+    return statusAtivo && marcadoComoFavorito && pertenceAoUsuario && item.url;
+  }).slice(0, limite);
+
+  return favoritos.map(function(item) {
+    return {
+      id: item.id_item || '',
+      titulo: item.titulo || 'Link',
+      url: item.url || '',
+      descricao: item.descricao || ''
+    };
+  });
+}
+
+function obterLimitesConfig_(config) {
+  return {
+    favoritos: obterNumeroConfig_(config, 'limite_favoritos', 5),
+    avisos: obterNumeroConfig_(config, 'limite_avisos', 3),
+    aniversariantes: obterNumeroConfig_(config, 'limite_aniversariantes', 25),
+    janela_aniversarios_dias: obterNumeroConfig_(config, 'janela_aniversarios_dias', 15),
+    retencao_historico_meses: obterNumeroConfig_(config, 'retencao_historico_meses', 12)
+  };
+}
+
+function obterNumeroConfig_(config, chave, fallback) {
+  const numero = Number(config && config[chave]);
+
+  if (!isFinite(numero)) {
+    return fallback;
+  }
+
+  return Math.max(0, Math.floor(numero));
+}
+
 function garantirHeaders_(sheet, headersEsperados) {
   if (sheet.getMaxColumns() < headersEsperados.length) {
     sheet.insertColumnsAfter(sheet.getMaxColumns(), headersEsperados.length - sheet.getMaxColumns());
@@ -643,6 +775,105 @@ function obterConfigFallback_() {
   });
 
   return config;
+}
+
+function calcularProximoAniversario_(valor, hoje) {
+  const partes = extrairDiaMes_(valor);
+
+  if (!partes) {
+    return null;
+  }
+
+  const anoAtual = hoje.getFullYear();
+  let proximo = new Date(anoAtual, partes.mes - 1, partes.dia);
+
+  if (inicioDoDia_(proximo) < hoje) {
+    proximo = new Date(anoAtual + 1, partes.mes - 1, partes.dia);
+  }
+
+  const diasAte = Math.round((inicioDoDia_(proximo).getTime() - hoje.getTime()) / 86400000);
+
+  return {
+    diasAte,
+    dataFormatada: Utilities.formatDate(proximo, obterTimeZone_(), 'dd/MM')
+  };
+}
+
+function extrairDiaMes_(valor) {
+  if (!valor) {
+    return null;
+  }
+
+  if (Object.prototype.toString.call(valor) === '[object Date]' && !isNaN(valor.getTime())) {
+    return {
+      dia: valor.getDate(),
+      mes: valor.getMonth() + 1
+    };
+  }
+
+  const texto = String(valor).trim();
+  const match = texto.match(/^(\d{1,2})\/(\d{1,2})(?:\/\d{2,4})?$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const dia = Number(match[1]);
+  const mes = Number(match[2]);
+
+  if (dia < 1 || dia > 31 || mes < 1 || mes > 12) {
+    return null;
+  }
+
+  return {
+    dia,
+    mes
+  };
+}
+
+function converterData_(valor) {
+  if (!valor) {
+    return null;
+  }
+
+  if (Object.prototype.toString.call(valor) === '[object Date]' && !isNaN(valor.getTime())) {
+    return valor;
+  }
+
+  const texto = String(valor).trim();
+  const match = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const dia = Number(match[1]);
+  const mes = Number(match[2]);
+  let ano = Number(match[3]);
+
+  if (ano < 100) {
+    ano += 2000;
+  }
+
+  return new Date(ano, mes - 1, dia);
+}
+
+function formatarData_(valor) {
+  const data = converterData_(valor);
+
+  if (!data) {
+    return '';
+  }
+
+  return Utilities.formatDate(data, obterTimeZone_(), 'dd/MM/yyyy');
+}
+
+function inicioDoDia_(data) {
+  return new Date(data.getFullYear(), data.getMonth(), data.getDate());
+}
+
+function obterTimeZone_() {
+  return Session.getScriptTimeZone() || 'America/Sao_Paulo';
 }
 
 function registrarAuditoria_(acao, entidade, detalhes) {
