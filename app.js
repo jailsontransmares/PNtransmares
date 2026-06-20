@@ -5,6 +5,7 @@ const state = {
   avisos: [],
   aniversariantes: [],
   favoritos: [],
+  meta: null,
   temaAtual: 'claro'
 };
 
@@ -27,6 +28,7 @@ async function iniciarApp() {
     state.avisos = response.data.avisos || [];
     state.aniversariantes = response.data.aniversariantes || [];
     state.favoritos = response.data.favoritos || [];
+    state.meta = response.data.meta || null;
 
     aplicarConfigVisual();
     definirTemaInicial();
@@ -66,10 +68,11 @@ function aplicarConfigVisual() {
 }
 
 function definirTemaInicial() {
+  const temaApi = state.meta?.modo_visual_efetivo;
   const preferenciaUsuario = state.usuario?.preferencia_modo_visual;
   const padraoSistema = state.config?.modo_visual_padrao || 'claro';
 
-  state.temaAtual = preferenciaUsuario || padraoSistema || 'claro';
+  state.temaAtual = temaApi || preferenciaUsuario || padraoSistema || 'claro';
 
   aplicarTema();
 }
@@ -181,9 +184,16 @@ function renderAniversariantes() {
     return '<p>Nenhum aniversariante nos próximos dias.</p>';
   }
 
-  return state.aniversariantes.map(item => `
-    <p><strong>${escapeHtml(item.nome || '')}</strong> ${escapeHtml(item.data || '')}</p>
-  `).join('');
+  return state.aniversariantes.map(item => {
+    const diasAte = Number(item.dias_ate);
+    const quando = Number.isFinite(diasAte)
+      ? ` · ${diasAte === 0 ? 'hoje' : `em ${diasAte} dia${diasAte === 1 ? '' : 's'}`}`
+      : '';
+
+    return `
+      <p><strong>${escapeHtml(item.nome || '')}</strong> ${escapeHtml(item.data || '')}${escapeHtml(quando)}</p>
+    `;
+  }).join('');
 }
 
 function renderFavoritos() {
