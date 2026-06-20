@@ -238,6 +238,164 @@ body.dark .brand h1 {
   border-radius: 999px;
 }
 
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.secondary-btn,
+.save-btn {
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  min-height: 38px;
+  padding: 8px 12px;
+}
+
+.secondary-btn {
+  background: var(--card);
+  color: var(--texto);
+}
+
+.save-btn {
+  background: var(--cor-principal);
+  border-color: var(--cor-principal);
+  color: white;
+}
+
+.save-btn:disabled,
+.admin-tab:disabled,
+.config-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.admin-shell {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.admin-tabs,
+.admin-panel {
+  background: var(--card);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.04);
+}
+
+.admin-tabs {
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+}
+
+.admin-tab {
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: var(--texto-suave);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.admin-tab.active {
+  background: var(--fundo);
+  color: var(--texto);
+  font-weight: 700;
+}
+
+.admin-panel {
+  padding: 18px;
+}
+
+.admin-panel-header {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.admin-panel-header h2 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.admin-panel-header p {
+  color: var(--texto-suave);
+  font-size: 14px;
+  margin: 4px 0 0;
+}
+
+.admin-message {
+  background: color-mix(in srgb, var(--cor-destaque) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cor-destaque) 30%, var(--borda));
+  border-radius: 8px;
+  color: var(--texto);
+  margin: 0 0 14px;
+  padding: 10px 12px;
+}
+
+.config-list {
+  display: grid;
+  gap: 10px;
+}
+
+.config-row {
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.2fr);
+  padding: 12px;
+}
+
+.config-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.config-info strong {
+  overflow-wrap: anywhere;
+}
+
+.config-info span {
+  color: var(--texto-suave);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.config-control {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.config-input {
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  color: var(--texto);
+  font: inherit;
+  min-height: 38px;
+  min-width: 0;
+  padding: 8px 10px;
+  width: 100%;
+}
+
+.color-input {
+  padding: 4px;
+}
+
 @media (max-width: 800px) {
   #app {
     padding: 14px;
@@ -263,5 +421,19 @@ body.dark .brand h1 {
 
   .quick-links-list {
     width: 100%;
+  }
+
+  .admin-shell,
+  .config-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-panel-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .config-control {
+    grid-template-columns: 1fr;
   }
 }
