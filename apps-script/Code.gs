@@ -205,6 +205,13 @@ function doGet(e) {
         exigirGestor_();
         result = saveAdminRecord(payload);
         break;
+      case 'getLinksData':
+        result = getLinksData(payload);
+        break;
+      case 'saveLinkItem':
+        exigirGestor_();
+        result = saveLinkItem(payload);
+        break;
       default:
         result = erro_('ACTION_NOT_FOUND', 'Ação não encontrada.', action);
     }
@@ -454,6 +461,139 @@ function saveAdminRecord(payload) {
   });
 }
 
+function getLinksData(payload) {
+  garantirAbasBase();
+  const usuario = obterUsuarioAutorizado_();
+  const escopo = normalizar_(payload && payload.escopo || 'corretora');
+  const filtros = {
+    categoria: String(payload && payload.categoria || '').trim(),
+    grupo: String(payload && payload.grupo || '').trim(),
+    status: normalizar_(payload && payload.status || '')
+  };
+  const gestor = normalizar_(usuario.perfil) === 'gestor';
+  const categorias = listarRegistrosAtivosAdmin_('categorias');
+  const grupos = listarRegistrosAtivosAdmin_('grupos');
+  const links = listarLinksUteis_({
+    escopo,
+    filtros,
+    gestor
+  });
+
+  return sucesso_('getLinksData', {
+    usuario: {
+      perfil: usuario.perfil,
+      gestor
+    },
+    escopo,
+    categorias,
+    grupos,
+    links
+  });
+}
+
+function saveLinkItem(payload) {
+  garantirAbasBase();
+  const id = String(payload && payload.id || '').trim();
+  const titulo = String(payload && payload.titulo || '').trim();
+  const descricao = String(payload && payload.descricao || '').trim();
+  const url = String(payload && payload.url || '').trim();
+  const categoria = String(payload && payload.categoria || '').trim();
+  const grupo = String(payload && payload.grupo || '').trim();
+  const status = normalizar_(payload && payload.status || 'ativo');
+  const escopo = normalizar_(payload && payload.escopo || 'corretora');
+  const usuario = obterUsuarioAutorizado_();
+
+  if (!titulo) {
+    return erro_('INVALID_LINK', 'Informe o título.', 'saveLinkItem');
+  }
+
+  if (!url || !/^https?:\/\//i.test(url)) {
+    return erro_('INVALID_URL', 'Informe uma URL começando com http:// ou https://.', 'saveLinkItem');
+  }
+
+  if (['ativo', 'inativo'].indexOf(status) === -1) {
+    return erro_('INVALID_STATUS', 'Status inválido.', 'saveLinkItem');
+  }
+
+  const sheet = obterPlanilha_().getSheetByName('Itens');
+  const headers = obterHeaders_(sheet);
+  validarColunasObrigatorias_(headers, ['id_item', 'tipo', 'titulo', 'descricao', 'url', 'categoria', 'grupo', 'status'], 'Itens');
+
+  const cols = obterMapaColunas_(headers);
+  const values = sheet.getDataRange().getValues();
+  const agora = new Date();
+  let linha = -1;
+  let idFinal = id;
+
+  if (idFinal) {
+    for (let i = 1; i < values.length; i++) {
+      if (String(values[i][cols.id_item] || '').trim() === idFinal) {
+        linha = i + 1;
+        break;
+      }
+    }
+  }
+
+  if (linha === -1) {
+    idFinal = idFinal || `link_${Utilities.getUuid().slice(0, 8)}`;
+    const row = new Array(headers.length).fill('');
+    row[cols.id_item] = idFinal;
+    row[cols.tipo] = obterTipoLinkPorEscopo_(escopo);
+    row[cols.titulo] = titulo;
+    row[cols.descricao] = descricao;
+    row[cols.url] = url;
+    row[cols.categoria] = categoria;
+    row[cols.grupo] = grupo;
+    row[cols.status] = status;
+
+    if (cols.criado_por >= 0) {
+      row[cols.criado_por] = usuario.email;
+    }
+
+    if (cols.data_cadastro >= 0) {
+      row[cols.data_cadastro] = agora;
+    }
+
+    if (cols.data_atualizacao >= 0) {
+      row[cols.data_atualizacao] = agora;
+    }
+
+    sheet.appendRow(row);
+  } else {
+    sheet.getRange(linha, cols.tipo + 1).setValue(obterTipoLinkPorEscopo_(escopo));
+    sheet.getRange(linha, cols.titulo + 1).setValue(titulo);
+    sheet.getRange(linha, cols.descricao + 1).setValue(descricao);
+    sheet.getRange(linha, cols.url + 1).setValue(url);
+    sheet.getRange(linha, cols.categoria + 1).setValue(categoria);
+    sheet.getRange(linha, cols.grupo + 1).setValue(grupo);
+    sheet.getRange(linha, cols.status + 1).setValue(status);
+
+    if (cols.data_atualizacao >= 0) {
+      sheet.getRange(linha, cols.data_atualizacao + 1).setValue(agora);
+    }
+  }
+
+  registrarAuditoria_('saveLinkItem', 'Itens', JSON.stringify({
+    id: idFinal,
+    titulo,
+    escopo,
+    status
+  }));
+
+  return sucesso_('saveLinkItem', {
+    item: {
+      id: idFinal,
+      titulo,
+      descricao,
+      url,
+      categoria,
+      grupo,
+      status,
+      escopo
+    }
+  });
+}
+
 function garantirAbasBase() {
   const ss = obterPlanilha_();
   const criadas = [];
@@ -633,6 +773,94 @@ function normalizarRegistroAdmin_(row, entidade) {
     descricao: row.descricao || '',
     status: row.status || ''
   };
+}
+
+function listarRegistrosAtivosAdmin_(entidadeNome) {
+  const entidade = obterEntidadeAdmin_(entidadeNome);
+  const sheet = obterPlanilha_().getSheetByName(entidade.sheet);
+
+  if (!sheet) {
+    return [];
+  }
+
+  return lerAbaComoObjetos_(sheet).map(function(row) {
+    return normalizarRegistroAdmin_(row, entidade);
+  }).filter(function(record) {
+    return normalizar_(record.status) === 'ativo';
+  }).sort(function(a, b) {
+    return String(a.nome).localeCompare(String(b.nome));
+  });
+}
+
+function listarLinksUteis_(options) {
+  const sheet = obterPlanilha_().getSheetByName('Itens');
+
+  if (!sheet) {
+    return [];
+  }
+
+  const tipoEsperado = obterTipoLinkPorEscopo_(options.escopo);
+  const filtros = options.filtros || {};
+
+  return lerAbaComoObjetos_(sheet).filter(function(item) {
+    if (normalizar_(item.tipo) !== tipoEsperado) {
+      return false;
+    }
+
+    if (!options.gestor && normalizar_(item.status) !== 'ativo') {
+      return false;
+    }
+
+    if (filtros.status && normalizar_(item.status) !== filtros.status) {
+      return false;
+    }
+
+    if (filtros.categoria && String(item.categoria || '') !== filtros.categoria) {
+      return false;
+    }
+
+    if (filtros.grupo && String(item.grupo || '') !== filtros.grupo) {
+      return false;
+    }
+
+    return true;
+  }).map(function(item) {
+    return {
+      id: item.id_item || '',
+      titulo: item.titulo || '',
+      descricao: item.descricao || '',
+      url: item.url || '',
+      categoria: item.categoria || '',
+      grupo: item.grupo || '',
+      status: item.status || ''
+    };
+  }).sort(function(a, b) {
+    return String(a.titulo).localeCompare(String(b.titulo));
+  });
+}
+
+function obterTipoLinkPorEscopo_(escopo) {
+  const normalizado = normalizar_(escopo);
+
+  if (normalizado === 'ar') {
+    return 'link_ar';
+  }
+
+  if (normalizado === 'gestao') {
+    return 'link_gestao';
+  }
+
+  return 'link_corretora';
+}
+
+function obterMapaColunas_(headers) {
+  const mapa = {};
+
+  headers.forEach(function(header, index) {
+    mapa[header] = index;
+  });
+
+  return mapa;
 }
 
 function validarValorConfig_(valor, definicao) {
