@@ -177,13 +177,17 @@ function doGet(e) {
         exigirGestor_();
         result = garantirPastaSistemaDrive();
         break;
+      case 'diagnosticoFase1':
+        exigirGestor_();
+        result = diagnosticoFase1();
+        break;
       default:
         result = erro_('ACTION_NOT_FOUND', 'Ação não encontrada.', action);
     }
 
     return respostaJson_(result, callback);
   } catch (error) {
-    return respostaJson_(erro_('INTERNAL_ERROR', error.message || 'Erro interno.', action), callback);
+    return respostaJson_(erro_(obterCodigoErro_(error), error.message || 'Erro interno.', action), callback);
   }
 }
 
@@ -393,6 +397,8 @@ function salvarConfig(chave, valor) {
   const values = sheet.getDataRange().getValues();
   const agora = new Date();
 
+  validarColunasObrigatorias_(headers, ['chave', 'valor'], 'Config');
+
   for (let i = 1; i < values.length; i++) {
     if (String(values[i][chaveCol] || '').trim() === chave) {
       sheet.getRange(i + 1, valorCol + 1).setValue(valor);
@@ -411,7 +417,11 @@ function salvarConfig(chave, valor) {
   const row = new Array(headers.length).fill('');
   row[chaveCol] = chave;
   row[valorCol] = valor;
-  row[atualizadoCol] = agora;
+
+  if (atualizadoCol >= 0) {
+    row[atualizadoCol] = agora;
+  }
+
   sheet.appendRow(row);
 
   return sucesso_('salvarConfig', {
@@ -463,7 +473,52 @@ function garantirPastaSistemaDrive() {
   return sucesso_('garantirPastaSistemaDrive', {
     id: folder.getId(),
     nome: folder.getName(),
+    url: folder.getUrl(),
     criada
+  });
+}
+
+function diagnosticoFase1() {
+  garantirAbasBase();
+  garantirConfigPadrao();
+  const config = obterConfig();
+  const chavesNaPlanilha = obterChavesConfigPlanilha_();
+  const pasta = garantirPastaSistemaDrive();
+  const ss = obterPlanilha_();
+  const abas = {};
+  const configs = {};
+
+  Object.keys(SHEET_HEADERS).forEach(function(nome) {
+    const sheet = ss.getSheetByName(nome);
+    const headers = sheet ? obterHeaders_(sheet) : [];
+    const faltantes = SHEET_HEADERS[nome].filter(function(header) {
+      return headers.indexOf(header) === -1;
+    });
+
+    abas[nome] = {
+      existe: Boolean(sheet),
+      linhas: sheet ? Math.max(0, sheet.getLastRow() - 1) : 0,
+      headers_ok: faltantes.length === 0,
+      headers_faltantes: faltantes
+    };
+  });
+
+  CONFIG_PADRAO.forEach(function(item) {
+    const chave = item[0];
+
+    configs[chave] = {
+      existe_na_planilha: chavesNaPlanilha.indexOf(chave) >= 0,
+      valor: config[chave] || ''
+    };
+  });
+
+  return sucesso_('diagnosticoFase1', {
+    usuario: obterUsuarioAutorizado_(),
+    planilha_id: SPREADSHEET_ID,
+    abas,
+    configs,
+    drive: pasta.data,
+    timestamp: new Date().toISOString()
   });
 }
 
@@ -777,6 +832,18 @@ function obterConfigFallback_() {
   return config;
 }
 
+function obterChavesConfigPlanilha_() {
+  const sheet = obterPlanilha_().getSheetByName('Config');
+
+  if (!sheet) {
+    return [];
+  }
+
+  return lerAbaComoObjetos_(sheet).map(function(row) {
+    return String(row.chave || '').trim();
+  }).filter(Boolean);
+}
+
 function calcularProximoAniversario_(valor, hoje) {
   const partes = extrairDiaMes_(valor);
 
@@ -896,6 +963,42 @@ function registrarAuditoria_(acao, entidade, detalhes) {
   } catch (error) {
     // Auditoria não deve bloquear a ação principal.
   }
+}
+
+function validarColunasObrigatorias_(headers, colunas, contexto) {
+  const faltantes = colunas.filter(function(coluna) {
+    return headers.indexOf(coluna) === -1;
+  });
+
+  if (faltantes.length) {
+    throw new Error(`${contexto}: cabeçalhos obrigatórios ausentes: ${faltantes.join(', ')}`);
+  }
+}
+
+function obterCodigoErro_(error) {
+  const mensagem = normalizar_(error && error.message);
+
+  if (mensagem.indexOf('não foi possível identificar') >= 0) {
+    return 'USER_EMAIL_NOT_AVAILABLE';
+  }
+
+  if (mensagem.indexOf('não cadastrado') >= 0) {
+    return 'USER_NOT_REGISTERED';
+  }
+
+  if (mensagem.indexOf('inativo') >= 0) {
+    return 'USER_INACTIVE';
+  }
+
+  if (mensagem.indexOf('apenas para gestor') >= 0) {
+    return 'GESTOR_REQUIRED';
+  }
+
+  if (mensagem.indexOf('cabeçalhos obrigatórios ausentes') >= 0) {
+    return 'INVALID_SHEET_HEADERS';
+  }
+
+  return 'INTERNAL_ERROR';
 }
 
 function parsePayload_(payload) {
