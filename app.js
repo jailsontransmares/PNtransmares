@@ -7,7 +7,10 @@ const state = {
   favoritos: [],
   meta: null,
   admin: {
+    aba: 'configuracoes',
     config: [],
+    categorias: [],
+    grupos: [],
     loading: false,
     message: ''
   },
@@ -269,27 +272,53 @@ function renderAdministracao() {
 
       <section class="admin-shell">
         <div class="admin-tabs">
-          <button class="admin-tab active" type="button">Configurações</button>
-          <button class="admin-tab" type="button" disabled>Categorias</button>
-          <button class="admin-tab" type="button" disabled>Grupos</button>
+          <button class="admin-tab ${state.admin.aba === 'configuracoes' ? 'active' : ''}" type="button" onclick="selecionarAbaAdmin('configuracoes')">Configurações</button>
+          <button class="admin-tab ${state.admin.aba === 'categorias' ? 'active' : ''}" type="button" onclick="selecionarAbaAdmin('categorias')">Categorias</button>
+          <button class="admin-tab ${state.admin.aba === 'grupos' ? 'active' : ''}" type="button" onclick="selecionarAbaAdmin('grupos')">Grupos</button>
         </div>
 
-        <section class="admin-panel">
-          <div class="admin-panel-header">
-            <div>
-              <h2>Configurações do Sistema</h2>
-              <p>Edite uma configuração por vez.</p>
-            </div>
-
-            <button class="secondary-btn" type="button" onclick="restaurarCoresPadrao()">Restaurar cores padrão</button>
-          </div>
-
-          ${state.admin.message ? `<p class="admin-message">${escapeHtml(state.admin.message)}</p>` : ''}
-          ${state.admin.loading ? '<p class="quick-link-empty">Carregando configurações...</p>' : renderConfigAdmin()}
-        </section>
+        ${renderAdminPanel()}
       </section>
     </main>
   `;
+}
+
+function renderAdminPanel() {
+  if (state.admin.aba === 'categorias') {
+    return renderCrudAdmin('categorias', 'Categorias', 'Organize os futuros itens do HUB por categorias.');
+  }
+
+  if (state.admin.aba === 'grupos') {
+    return renderCrudAdmin('grupos', 'Grupos', 'Organize permissões e agrupamentos para fases futuras.');
+  }
+
+  return `
+    <section class="admin-panel">
+      <div class="admin-panel-header">
+        <div>
+          <h2>Configurações do Sistema</h2>
+          <p>Edite uma configuração por vez.</p>
+        </div>
+
+        <button class="secondary-btn" type="button" onclick="restaurarCoresPadrao()">Restaurar cores padrão</button>
+      </div>
+
+      ${state.admin.message ? `<p class="admin-message">${escapeHtml(state.admin.message)}</p>` : ''}
+      ${state.admin.loading ? '<p class="quick-link-empty">Carregando configurações...</p>' : renderConfigAdmin()}
+    </section>
+  `;
+}
+
+async function selecionarAbaAdmin(aba) {
+  state.admin.aba = aba;
+  state.admin.message = '';
+
+  if (aba === 'categorias' || aba === 'grupos') {
+    await carregarRegistrosAdmin(aba);
+    return;
+  }
+
+  renderAdministracao();
 }
 
 function renderConfigAdmin() {
@@ -390,6 +419,114 @@ function obterRotuloConfig(chave) {
   };
 
   return rotulos[chave] || chave;
+}
+
+function renderCrudAdmin(entidade, titulo, subtitulo) {
+  const records = state.admin[entidade] || [];
+
+  return `
+    <section class="admin-panel">
+      <div class="admin-panel-header">
+        <div>
+          <h2>${escapeHtml(titulo)}</h2>
+          <p>${escapeHtml(subtitulo)}</p>
+        </div>
+      </div>
+
+      ${state.admin.message ? `<p class="admin-message">${escapeHtml(state.admin.message)}</p>` : ''}
+
+      <section class="crud-create">
+        <input id="${entidade}_novo_nome" class="config-input" type="text" placeholder="Nome">
+        <input id="${entidade}_novo_descricao" class="config-input" type="text" placeholder="Descrição">
+        <select id="${entidade}_novo_status" class="config-input">
+          <option value="ativo">ativo</option>
+          <option value="inativo">inativo</option>
+        </select>
+        <button class="save-btn" type="button" onclick="salvarRegistroAdmin('${entidade}', '')">Adicionar</button>
+      </section>
+
+      ${state.admin.loading ? '<p class="quick-link-empty">Carregando registros...</p>' : renderRegistrosAdmin(entidade, records)}
+    </section>
+  `;
+}
+
+function renderRegistrosAdmin(entidade, records) {
+  if (!records.length) {
+    return '<p class="quick-link-empty">Nenhum registro cadastrado.</p>';
+  }
+
+  return `
+    <div class="crud-list">
+      ${records.map(record => renderRegistroAdmin(entidade, record)).join('')}
+    </div>
+  `;
+}
+
+function renderRegistroAdmin(entidade, record) {
+  const id = escapeAttr(record.id || '');
+  const prefixo = `${entidade}_${id}`;
+
+  return `
+    <article class="crud-row">
+      <input id="${prefixo}_nome" class="config-input" type="text" value="${escapeAttr(record.nome || '')}" placeholder="Nome">
+      <input id="${prefixo}_descricao" class="config-input" type="text" value="${escapeAttr(record.descricao || '')}" placeholder="Descrição">
+      <select id="${prefixo}_status" class="config-input">
+        <option value="ativo" ${record.status === 'ativo' ? 'selected' : ''}>ativo</option>
+        <option value="inativo" ${record.status === 'inativo' ? 'selected' : ''}>inativo</option>
+      </select>
+      <button class="save-btn" type="button" onclick="salvarRegistroAdmin('${entidade}', '${id}')">Salvar</button>
+    </article>
+  `;
+}
+
+async function carregarRegistrosAdmin(entidade) {
+  state.admin.loading = true;
+  renderAdministracao();
+
+  try {
+    const response = await chamarApi('listAdminRecords', {
+      entidade
+    });
+
+    if (!response.ok) {
+      throw new Error(response.message || response.error?.message || 'Não foi possível carregar registros.');
+    }
+
+    state.admin[entidade] = response.data.records || [];
+    state.admin.loading = false;
+    renderAdministracao();
+  } catch (erro) {
+    state.admin.loading = false;
+    state.admin.message = erro.message || 'Erro ao carregar registros.';
+    renderAdministracao();
+  }
+}
+
+async function salvarRegistroAdmin(entidade, id) {
+  const prefixo = id ? `${entidade}_${id}` : `${entidade}_novo`;
+  const nome = document.getElementById(`${prefixo}_nome`)?.value || '';
+  const descricao = document.getElementById(`${prefixo}_descricao`)?.value || '';
+  const status = document.getElementById(`${prefixo}_status`)?.value || 'ativo';
+
+  try {
+    const response = await chamarApi('saveAdminRecord', {
+      entidade,
+      id,
+      nome,
+      descricao,
+      status
+    });
+
+    if (!response.ok) {
+      throw new Error(response.message || response.error?.message || 'Não foi possível salvar.');
+    }
+
+    state.admin.message = 'Registro salvo.';
+    await carregarRegistrosAdmin(entidade);
+  } catch (erro) {
+    state.admin.message = erro.message || 'Erro ao salvar registro.';
+    renderAdministracao();
+  }
 }
 
 function renderConfigInput(item, inputId, disabled) {
