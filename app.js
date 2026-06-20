@@ -214,7 +214,6 @@ function renderDashboard() {
           <article class="module-card" onclick="abrirModulo('${escapeAttr(card.id)}')">
             <h3>${escapeHtml(card.titulo)}</h3>
             <p>${escapeHtml(card.descricao || '')}</p>
-            <span class="badge">Acessar</span>
           </article>
         `).join('')}
       </section>
@@ -913,7 +912,7 @@ function renderLinkItem(item, gestor) {
   return `
     <article class="link-row status-line-${escapeAttr(item.status || 'inativo')}">
       <div class="link-main">
-        <span class="link-group-label">${escapeHtml(item.grupo || 'Sem grupo')}</span>
+        <span class="card-taxonomy">${escapeHtml(item.categoria || 'Sem categoria')} | ${escapeHtml(item.grupo || 'Sem grupo')}</span>
         <h3>${escapeHtml(item.titulo || 'Link')}</h3>
         <p>${escapeHtml(item.descricao || '')}</p>
           <div class="link-buttons">
@@ -921,7 +920,6 @@ function renderLinkItem(item, gestor) {
             <button id="copy_${escapeAttr(item.id)}" class="link-sub-btn" type="button" onclick="copiarLink('${escapeAttr(item.id)}', '${escapeAttr(item.url)}')">Copiar</button>
             <button id="fav_${escapeAttr(item.id)}" class="link-sub-btn favorite-btn ${item.favorito ? 'active' : ''}" type="button" onclick="alternarFavoritoLink('${escapeAttr(item.id)}', ${item.favorito ? 'false' : 'true'})">${item.favorito ? 'Favorito' : 'Favoritar'}</button>
           </div>
-          <small>${escapeHtml(item.categoria || 'Sem categoria')}</small>
       </div>
 
       ${gestor ? `
@@ -1268,10 +1266,9 @@ function renderSenhaItem(item, gestor) {
   return `
     <article class="password-row status-line-${escapeAttr(item.status || 'inativo')}">
       <div>
-        <span class="link-group-label">${escapeHtml(item.grupo || 'Sem grupo')}</span>
+        <span class="card-taxonomy">${escapeHtml(item.categoria || 'Sem categoria')} | ${escapeHtml(item.grupo || 'Sem grupo')}</span>
         <h3>${escapeHtml(item.titulo || 'Acesso')}</h3>
         <p>${escapeHtml(item.descricao || '')}</p>
-        <small>${escapeHtml(item.categoria || 'Sem categoria')}</small>
       </div>
 
       <div class="password-fields">
