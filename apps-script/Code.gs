@@ -181,6 +181,18 @@ function doGet(e) {
         exigirGestor_();
         result = diagnosticoFase1();
         break;
+      case 'getAdminData':
+        exigirGestor_();
+        result = getAdminData();
+        break;
+      case 'saveConfig':
+        exigirGestor_();
+        result = saveConfig(payload);
+        break;
+      case 'restoreDefaultColors':
+        exigirGestor_();
+        result = restoreDefaultColors();
+        break;
       default:
         result = erro_('ACTION_NOT_FOUND', 'Ação não encontrada.', action);
     }
@@ -268,6 +280,60 @@ function saveUserTheme(payload) {
   }
 
   return erro_('USER_NOT_FOUND', 'Usuário não encontrado.', 'saveUserTheme');
+}
+
+function getAdminData() {
+  garantirConfigPadrao();
+
+  return sucesso_('getAdminData', {
+    config: obterConfigDetalhada_()
+  });
+}
+
+function saveConfig(payload) {
+  const chave = String(payload && payload.chave || '').trim();
+  const valor = payload && Object.prototype.hasOwnProperty.call(payload, 'valor')
+    ? String(payload.valor)
+    : '';
+  const definicao = obterDefinicaoConfig_(chave);
+
+  if (!definicao) {
+    return erro_('CONFIG_NOT_ALLOWED', 'Configuração não permitida.', 'saveConfig');
+  }
+
+  const valorValidado = validarValorConfig_(valor, definicao);
+  const resultado = salvarConfig(chave, valorValidado);
+
+  registrarAuditoria_('saveConfig', 'Config', JSON.stringify({
+    chave,
+    valor: valorValidado
+  }));
+
+  return sucesso_('saveConfig', {
+    chave,
+    valor: valorValidado,
+    config: obterConfig(),
+    resultado: resultado.data
+  });
+}
+
+function restoreDefaultColors() {
+  const cores = ['cor_principal', 'cor_secundaria', 'cor_destaque'];
+  const restauradas = {};
+
+  cores.forEach(function(chave) {
+    const definicao = obterDefinicaoConfig_(chave);
+
+    salvarConfig(chave, definicao.valor_padrao);
+    restauradas[chave] = definicao.valor_padrao;
+  });
+
+  registrarAuditoria_('restoreDefaultColors', 'Config', JSON.stringify(restauradas));
+
+  return sucesso_('restoreDefaultColors', {
+    restauradas,
+    config: obterConfig()
+  });
 }
 
 function garantirAbasBase() {
@@ -384,6 +450,86 @@ function obterConfig() {
   });
 
   return fallback;
+}
+
+function obterConfigDetalhada_() {
+  const config = obterConfig();
+
+  return CONFIG_PADRAO.map(function(item) {
+    const chave = item[0];
+
+    return {
+      chave,
+      valor: config[chave] || '',
+      valor_padrao: item[1],
+      descricao: item[2],
+      tipo: item[3],
+      editavel: ['drive_folder_id'].indexOf(chave) === -1
+    };
+  });
+}
+
+function obterDefinicaoConfig_(chave) {
+  for (let i = 0; i < CONFIG_PADRAO.length; i++) {
+    if (CONFIG_PADRAO[i][0] === chave) {
+      return {
+        chave: CONFIG_PADRAO[i][0],
+        valor_padrao: CONFIG_PADRAO[i][1],
+        descricao: CONFIG_PADRAO[i][2],
+        tipo: CONFIG_PADRAO[i][3]
+      };
+    }
+  }
+
+  return null;
+}
+
+function validarValorConfig_(valor, definicao) {
+  const texto = String(valor == null ? '' : valor).trim();
+
+  if (definicao.chave === 'drive_folder_id') {
+    throw new Error('Configuração gerenciada automaticamente pelo sistema.');
+  }
+
+  if (definicao.tipo === 'cor') {
+    if (!/^#[0-9A-Fa-f]{6}$/.test(texto)) {
+      throw new Error('Informe uma cor válida no formato #RRGGBB.');
+    }
+
+    return texto.toUpperCase();
+  }
+
+  if (definicao.tipo === 'numero') {
+    const numero = Number(texto);
+
+    if (!isFinite(numero) || numero < 0) {
+      throw new Error('Informe um número válido maior ou igual a zero.');
+    }
+
+    return String(Math.floor(numero));
+  }
+
+  if (definicao.tipo === 'booleano') {
+    const normalizado = normalizar_(texto);
+
+    if (['sim', 'nao'].indexOf(normalizado) === -1) {
+      throw new Error('Informe sim ou nao.');
+    }
+
+    return normalizado;
+  }
+
+  if (definicao.chave === 'modo_visual_padrao') {
+    const normalizado = normalizar_(texto);
+
+    if (['claro', 'escuro'].indexOf(normalizado) === -1) {
+      throw new Error('Informe claro ou escuro.');
+    }
+
+    return normalizado;
+  }
+
+  return texto;
 }
 
 function salvarConfig(chave, valor) {
