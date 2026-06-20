@@ -604,9 +604,10 @@ body.dark .brand h1 {
   border-bottom: 4px solid var(--cor-destaque);
   display: flex;
   flex-direction: column;
-  gap: 9px;
-  min-height: 132px;
-  padding: 10px;
+  gap: 6px;
+  min-height: 104px;
+  padding: 8px 48px 8px 8px;
+  position: relative;
 }
 
 .link-row.editing {
@@ -617,20 +618,26 @@ body.dark .brand h1 {
   border-bottom-color: #9CA3AF;
 }
 
+.link-row .crud-actions {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+}
+
 .link-main {
   display: grid;
-  gap: 5px;
+  gap: 3px;
   min-width: 0;
 }
 
 .link-main h3 {
-  font-size: 14px;
+  font-size: 13px;
   margin: 0;
 }
 
 .link-main p {
   color: var(--texto-suave);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.35;
   margin: 0;
 }
@@ -649,7 +656,7 @@ body.dark .brand h1 {
 
 .link-group-label {
   color: var(--texto-suave);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
 }
