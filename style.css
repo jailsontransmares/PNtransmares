@@ -676,6 +676,12 @@ body.dark .brand h1 {
   color: white;
 }
 
+.favorite-btn.active {
+  background: color-mix(in srgb, var(--cor-destaque) 14%, var(--card));
+  border-color: var(--cor-destaque);
+  color: var(--cor-destaque);
+}
+
 .link-group-label {
   color: var(--texto-suave);
   font-size: 10px;
