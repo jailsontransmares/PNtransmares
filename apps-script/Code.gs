@@ -29,9 +29,11 @@ const SHEET_HEADERS = {
     'categoria',
     'grupo',
     'status',
+    'favorito_emails',
     'criado_por',
     'data_cadastro',
-    'data_atualizacao'
+    'data_atualizacao',
+    'data_favorito_atualizacao'
   ],
   Categorias: [
     'id_categoria',
@@ -211,6 +213,13 @@ function doGet(e) {
       case 'saveLinkItem':
         exigirGestor_();
         result = saveLinkItem(payload);
+        break;
+      case 'toggleFavoriteLink':
+        result = toggleFavoriteLink(payload);
+        break;
+      case 'diagnosticoFase3':
+        exigirGestor_();
+        result = diagnosticoFase3();
         break;
       default:
         result = erro_('ACTION_NOT_FOUND', 'Ação não encontrada.', action);
@@ -471,12 +480,14 @@ function getLinksData(payload) {
     status: normalizar_(payload && payload.status || '')
   };
   const gestor = normalizar_(usuario.perfil) === 'gestor';
+  const config = obterConfig();
   const categorias = listarRegistrosAtivosAdmin_('categorias');
   const grupos = listarRegistrosAtivosAdmin_('grupos');
   const links = listarLinksUteis_({
     escopo,
     filtros,
-    gestor
+    gestor,
+    usuario
   });
 
   return sucesso_('getLinksData', {
@@ -485,6 +496,7 @@ function getLinksData(payload) {
       gestor
     },
     escopo,
+    limite_favoritos: obterNumeroConfig_(config, 'limite_favoritos', 5),
     categorias,
     grupos,
     links
@@ -592,6 +604,57 @@ function saveLinkItem(payload) {
       escopo
     }
   });
+}
+
+function toggleFavoriteLink(payload) {
+  garantirAbasBase();
+  const usuario = obterUsuarioAutorizado_();
+  const id = String(payload && payload.id || '').trim();
+  const favorito = Boolean(payload && payload.favorito);
+  const config = obterConfig();
+  const limite = obterNumeroConfig_(config, 'limite_favoritos', 5);
+
+  if (!id) {
+    return erro_('INVALID_LINK', 'Link inválido.', 'toggleFavoriteLink');
+  }
+
+  const sheet = obterPlanilha_().getSheetByName('Itens');
+  const headers = obterHeaders_(sheet);
+  validarColunasObrigatorias_(headers, ['id_item', 'favorito_emails'], 'Itens');
+  const cols = obterMapaColunas_(headers);
+  const values = sheet.getDataRange().getValues();
+  const email = normalizar_(usuario.email);
+  const favoritosAtuais = obterIdsFavoritosUsuario_(email);
+
+  if (favorito && favoritosAtuais.indexOf(id) === -1 && favoritosAtuais.length >= limite) {
+    return erro_('FAVORITE_LIMIT_REACHED', `Limite de ${limite} favoritos atingido.`, 'toggleFavoriteLink');
+  }
+
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][cols.id_item] || '').trim() === id) {
+      const emails = parseListaEmails_(values[i][cols.favorito_emails]);
+      const atualizados = favorito
+        ? adicionarEmailLista_(emails, email)
+        : removerEmailLista_(emails, email);
+
+      sheet.getRange(i + 1, cols.favorito_emails + 1).setValue(atualizados.join(', '));
+
+      if (cols.data_favorito_atualizacao >= 0) {
+        sheet.getRange(i + 1, cols.data_favorito_atualizacao + 1).setValue(new Date());
+      }
+
+      return sucesso_('toggleFavoriteLink', {
+        id,
+        favorito,
+        favoritos_count: favorito
+          ? favoritosAtuais.concat([id]).filter(function(value, index, array) { return array.indexOf(value) === index; }).length
+          : favoritosAtuais.filter(function(value) { return value !== id; }).length,
+        limite
+      });
+    }
+  }
+
+  return erro_('LINK_NOT_FOUND', 'Link não encontrado.', 'toggleFavoriteLink');
 }
 
 function garantirAbasBase() {
@@ -801,6 +864,7 @@ function listarLinksUteis_(options) {
 
   const tipoEsperado = obterTipoLinkPorEscopo_(options.escopo);
   const filtros = options.filtros || {};
+  const emailUsuario = normalizar_(options.usuario && options.usuario.email);
 
   return lerAbaComoObjetos_(sheet).filter(function(item) {
     if (normalizar_(item.tipo) !== tipoEsperado) {
@@ -832,10 +896,46 @@ function listarLinksUteis_(options) {
       url: item.url || '',
       categoria: item.categoria || '',
       grupo: item.grupo || '',
-      status: item.status || ''
+      status: item.status || '',
+      favorito: parseListaEmails_(item.favorito_emails).indexOf(emailUsuario) >= 0
     };
   }).sort(function(a, b) {
     return String(a.titulo).localeCompare(String(b.titulo));
+  });
+}
+
+function obterIdsFavoritosUsuario_(email) {
+  const sheet = obterPlanilha_().getSheetByName('Itens');
+
+  if (!sheet) {
+    return [];
+  }
+
+  return lerAbaComoObjetos_(sheet).filter(function(item) {
+    return normalizar_(item.status) === 'ativo'
+      && parseListaEmails_(item.favorito_emails).indexOf(email) >= 0;
+  }).map(function(item) {
+    return item.id_item || '';
+  }).filter(Boolean);
+}
+
+function parseListaEmails_(valor) {
+  return String(valor || '').split(',').map(function(email) {
+    return normalizar_(email);
+  }).filter(Boolean);
+}
+
+function adicionarEmailLista_(emails, email) {
+  if (emails.indexOf(email) === -1) {
+    emails.push(email);
+  }
+
+  return emails;
+}
+
+function removerEmailLista_(emails, email) {
+  return emails.filter(function(item) {
+    return item !== email;
   });
 }
 
@@ -1065,6 +1165,49 @@ function diagnosticoFase2() {
       'restoreDefaultColors',
       'listAdminRecords',
       'saveAdminRecord'
+    ],
+    timestamp: new Date().toISOString()
+  });
+}
+
+function diagnosticoFase3() {
+  garantirAbasBase();
+  const usuario = obterUsuarioAutorizado_();
+  const sheet = obterPlanilha_().getSheetByName('Itens');
+  const rows = sheet ? lerAbaComoObjetos_(sheet) : [];
+  const email = normalizar_(usuario.email);
+  const resumo = rows.reduce(function(acc, item) {
+    const tipo = normalizar_(item.tipo);
+
+    if (['link_corretora', 'link_ar', 'link_gestao'].indexOf(tipo) >= 0) {
+      acc.total_links += 1;
+
+      if (normalizar_(item.status) === 'ativo') {
+        acc.ativos += 1;
+      } else {
+        acc.inativos += 1;
+      }
+    }
+
+    if (parseListaEmails_(item.favorito_emails).indexOf(email) >= 0) {
+      acc.favoritos_usuario += 1;
+    }
+
+    return acc;
+  }, {
+    total_links: 0,
+    ativos: 0,
+    inativos: 0,
+    favoritos_usuario: 0
+  });
+
+  return sucesso_('diagnosticoFase3', {
+    usuario,
+    resumo,
+    endpoints: [
+      'getLinksData',
+      'saveLinkItem',
+      'toggleFavoriteLink'
     ],
     timestamp: new Date().toISOString()
   });
@@ -1314,12 +1457,9 @@ function obterFavoritosIniciais_(usuario, config) {
   const emailUsuario = normalizar_(usuario.email);
   const favoritos = lerAbaComoObjetos_(sheet).filter(function(item) {
     const statusAtivo = normalizar_(item.status) === 'ativo';
-    const tipo = normalizar_(item.tipo);
-    const usuarioItem = normalizar_(item.usuario_email || item.email_usuario || item.criado_por);
-    const marcadoComoFavorito = ['favorito', 'favoritos', 'link_rapido', 'links_rapidos'].indexOf(tipo) >= 0;
-    const pertenceAoUsuario = !usuarioItem || usuarioItem === emailUsuario;
+    const marcadoComoFavorito = parseListaEmails_(item.favorito_emails).indexOf(emailUsuario) >= 0;
 
-    return statusAtivo && marcadoComoFavorito && pertenceAoUsuario && item.url;
+    return statusAtivo && marcadoComoFavorito && item.url;
   }).slice(0, limite);
 
   return favoritos.map(function(item) {
