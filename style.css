@@ -642,16 +642,38 @@ body.dark .brand h1 {
   margin: 0;
 }
 
-.link-main a {
-  color: var(--cor-principal);
-  font-size: 12px;
-  font-weight: 700;
-  text-decoration: none;
-}
-
 .link-main small {
   color: var(--texto-suave);
   font-size: 10px;
+}
+
+.link-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.link-sub-btn {
+  background: var(--card);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  color: var(--cor-principal);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  min-height: 28px;
+  padding: 5px 8px;
+  text-decoration: none;
+}
+
+.link-sub-btn:hover {
+  border-color: var(--cor-principal);
+}
+
+.link-sub-btn.copied {
+  background: var(--cor-destaque);
+  border-color: var(--cor-destaque);
+  color: white;
 }
 
 .link-group-label {
