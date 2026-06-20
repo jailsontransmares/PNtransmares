@@ -747,10 +747,11 @@ body.dark .brand h1 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.link-group-label {
+.card-taxonomy {
   color: var(--texto-suave);
   font-size: 10px;
   font-weight: 700;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
