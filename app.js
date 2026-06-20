@@ -2,6 +2,9 @@ const state = {
   usuario: null,
   config: null,
   cards: [],
+  avisos: [],
+  aniversariantes: [],
+  favoritos: [],
   temaAtual: 'claro'
 };
 
@@ -14,13 +17,16 @@ async function iniciarApp() {
     const response = await chamarApi('getInitialData');
 
     if (!response.ok) {
-      renderErro(response.message || 'Acesso não autorizado.');
+      renderErro(response.message || response.error?.message || 'Acesso não autorizado.');
       return;
     }
 
     state.usuario = response.data.usuario;
     state.config = response.data.config;
     state.cards = response.data.cards || [];
+    state.avisos = response.data.avisos || [];
+    state.aniversariantes = response.data.aniversariantes || [];
+    state.favoritos = response.data.favoritos || [];
 
     aplicarConfigVisual();
     definirTemaInicial();
@@ -52,8 +58,8 @@ function renderErro(mensagem) {
 function aplicarConfigVisual() {
   if (!state.config) return;
 
-  document.documentElement.style.setProperty('--cor-principal', state.config.cor_principal || '#0F4C81');
-  document.documentElement.style.setProperty('--cor-secundaria', state.config.cor_secundaria || '#1F2937');
+  document.documentElement.style.setProperty('--cor-principal', state.config.cor_principal || '#0B3A66');
+  document.documentElement.style.setProperty('--cor-secundaria', state.config.cor_secundaria || '#123C69');
   document.documentElement.style.setProperty('--cor-destaque', state.config.cor_destaque || '#16A34A');
 
   document.title = state.config.nome_sistema || 'PAINEL TRANSMARES';
@@ -114,40 +120,40 @@ function renderDashboard() {
       </header>
 
       <section class="info-grid">
-  <div class="info-card">
-    <div class="info-card-header">
-      <span class="info-icon">📢</span>
-      <h2>Avisos internos</h2>
-    </div>
-    <p>Nenhum aviso ativo no momento.</p>
-  </div>
+        <div class="info-card">
+          <div class="info-card-header">
+            <span class="info-icon">📢</span>
+            <h2>Avisos internos</h2>
+          </div>
+          ${renderAvisos()}
+        </div>
 
-  <div class="info-card">
-    <div class="info-card-header">
-      <span class="info-icon">🎂</span>
-      <h2>Aniversariantes</h2>
-    </div>
-    <p>Nenhum aniversariante nos próximos dias.</p>
-  </div>
-</section>
+        <div class="info-card">
+          <div class="info-card-header">
+            <span class="info-icon">🎂</span>
+            <h2>Aniversariantes</h2>
+          </div>
+          ${renderAniversariantes()}
+        </div>
+      </section>
 
-<section class="quick-links-strip">
-  <div class="quick-links-title">
-    <span>⭐</span>
-    <strong>Links rápidos</strong>
-  </div>
+      <section class="quick-links-strip">
+        <div class="quick-links-title">
+          <span>⭐</span>
+          <strong>Links rápidos</strong>
+        </div>
 
-  <div class="quick-links-list">
-    <span class="quick-link-empty">Nenhum favorito cadastrado.</span>
-  </div>
-</section>
+        <div class="quick-links-list">
+          ${renderFavoritos()}
+        </div>
+      </section>
 
-<div class="section-title">
-  <h2>Módulos</h2>
-  <p>Acesse as principais áreas operacionais do painel.</p>
-</div>
+      <div class="section-title">
+        <h2>Módulos</h2>
+        <p>Acesse as principais áreas operacionais do painel.</p>
+      </div>
 
-<section class="module-grid">
+      <section class="module-grid">
         ${state.cards.map(card => `
           <article class="module-card" onclick="abrirModulo('${escapeAttr(card.id)}')">
             <h3>${escapeHtml(card.titulo)}</h3>
@@ -160,8 +166,45 @@ function renderDashboard() {
   `;
 }
 
+function renderAvisos() {
+  if (!state.avisos.length) {
+    return '<p>Nenhum aviso ativo no momento.</p>';
+  }
+
+  return state.avisos.map(aviso => `
+    <p><strong>${escapeHtml(aviso.titulo || 'Aviso')}</strong><br>${escapeHtml(aviso.mensagem || '')}</p>
+  `).join('');
+}
+
+function renderAniversariantes() {
+  if (!state.aniversariantes.length) {
+    return '<p>Nenhum aniversariante nos próximos dias.</p>';
+  }
+
+  return state.aniversariantes.map(item => `
+    <p><strong>${escapeHtml(item.nome || '')}</strong> ${escapeHtml(item.data || '')}</p>
+  `).join('');
+}
+
+function renderFavoritos() {
+  if (!state.favoritos.length) {
+    return '<span class="quick-link-empty">Nenhum favorito cadastrado.</span>';
+  }
+
+  return state.favoritos.map(link => `
+    <button class="quick-link-pill" type="button" onclick="abrirLink('${escapeAttr(link.url || '')}')">
+      ${escapeHtml(link.titulo || 'Link')}
+    </button>
+  `).join('');
+}
+
 function abrirModulo(id) {
   alert(`Módulo ainda não implementado: ${id}`);
+}
+
+function abrirLink(url) {
+  if (!url) return;
+  window.open(url, '_blank', 'noopener');
 }
 
 function escapeHtml(texto) {
