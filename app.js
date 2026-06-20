@@ -29,6 +29,7 @@ const state = {
     categorias: [],
     grupos: [],
     items: [],
+    limiteFavoritos: 5,
     filtros: {
       categoria: '',
       grupo: '',
@@ -806,6 +807,7 @@ async function carregarLinksUteis() {
     state.links.categorias = response.data.categorias || [];
     state.links.grupos = response.data.grupos || [];
     state.links.items = response.data.links || [];
+    state.links.limiteFavoritos = response.data.limite_favoritos || 5;
     state.links.loading = false;
     renderLinksUteis();
   } catch (erro) {
@@ -864,6 +866,7 @@ function renderLinksUteis() {
           ` : ''}
         </div>
 
+        <p class="quick-link-empty">Favoritos: ${contarFavoritosLinks()} de ${state.links.limiteFavoritos}</p>
         ${state.links.message ? `<p class="admin-message">${escapeHtml(state.links.message)}</p>` : ''}
         ${state.links.loading ? '<p class="quick-link-empty">Carregando links...</p>' : renderListaLinksUteis(gestor)}
         ${renderModalNovoLink()}
@@ -894,6 +897,7 @@ function renderLinkItem(item, gestor) {
           <div class="link-buttons">
             <a class="link-sub-btn" href="${escapeAttr(item.url)}" target="_blank" rel="noopener">Abrir</a>
             <button id="copy_${escapeAttr(item.id)}" class="link-sub-btn" type="button" onclick="copiarLink('${escapeAttr(item.id)}', '${escapeAttr(item.url)}')">Copiar</button>
+            <button id="fav_${escapeAttr(item.id)}" class="link-sub-btn favorite-btn ${item.favorito ? 'active' : ''}" type="button" onclick="alternarFavoritoLink('${escapeAttr(item.id)}', ${item.favorito ? 'false' : 'true'})">${item.favorito ? 'Favorito' : 'Favoritar'}</button>
           </div>
           <small>${escapeHtml(item.categoria || 'Sem categoria')}</small>
       </div>
@@ -1059,6 +1063,52 @@ async function copiarLink(id, url) {
   }
 }
 
+async function alternarFavoritoLink(id, favorito) {
+  const botao = document.getElementById(`fav_${id}`);
+
+  if (botao) {
+    botao.textContent = favorito ? 'Salvando' : 'Removendo';
+    botao.disabled = true;
+  }
+
+  try {
+    const response = await chamarApi('toggleFavoriteLink', {
+      id,
+      favorito
+    });
+
+    if (!response.ok) {
+      throw new Error(obterMensagemApi(response, 'Não foi possível alterar o favorito.'));
+    }
+
+    await carregarDadosIniciaisSilencioso();
+    await carregarLinksUteis();
+  } catch (erro) {
+    state.links.message = erro.message || 'Erro ao alterar favorito.';
+    renderLinksUteis();
+  }
+}
+
+function contarFavoritosLinks() {
+  return state.links.items.filter(item => item.favorito).length;
+}
+
+async function carregarDadosIniciaisSilencioso() {
+  const response = await chamarApi('getInitialData');
+
+  if (!response.ok) {
+    return;
+  }
+
+  state.usuario = response.data.usuario;
+  state.config = response.data.config;
+  state.cards = response.data.cards || [];
+  state.avisos = response.data.avisos || [];
+  state.aniversariantes = response.data.aniversariantes || [];
+  state.favoritos = response.data.favoritos || [];
+  state.meta = response.data.meta || null;
+}
+
 function atualizarBotaoSalvarLink(texto, disabled, classe) {
   const botao = document.getElementById('novo_link_salvar');
 
@@ -1124,7 +1174,9 @@ function obterMensagemApi(response, fallback) {
     INVALID_RECORD: 'Informe os dados obrigatórios.',
     INVALID_STATUS: 'Status inválido.',
     INVALID_LINK: 'Informe os dados obrigatórios do link.',
-    INVALID_URL: 'Informe uma URL começando com http:// ou https://.'
+    INVALID_URL: 'Informe uma URL começando com http:// ou https://.',
+    FAVORITE_LIMIT_REACHED: 'Limite de favoritos atingido.',
+    LINK_NOT_FOUND: 'Link não encontrado.'
   };
 
   return mensagens[code] || response?.message || response?.error?.message || fallback;
