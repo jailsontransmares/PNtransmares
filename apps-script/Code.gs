@@ -193,6 +193,14 @@ function doGet(e) {
         exigirGestor_();
         result = restoreDefaultColors();
         break;
+      case 'listAdminRecords':
+        exigirGestor_();
+        result = listAdminRecords(payload);
+        break;
+      case 'saveAdminRecord':
+        exigirGestor_();
+        result = saveAdminRecord(payload);
+        break;
       default:
         result = erro_('ACTION_NOT_FOUND', 'Ação não encontrada.', action);
     }
@@ -333,6 +341,112 @@ function restoreDefaultColors() {
   return sucesso_('restoreDefaultColors', {
     restauradas,
     config: obterConfig()
+  });
+}
+
+function listAdminRecords(payload) {
+  const entidade = obterEntidadeAdmin_(payload && payload.entidade);
+  const sheet = obterPlanilha_().getSheetByName(entidade.sheet);
+
+  if (!sheet) {
+    return sucesso_('listAdminRecords', {
+      entidade: entidade.nome,
+      records: []
+    });
+  }
+
+  const records = lerAbaComoObjetos_(sheet).map(function(row) {
+    return normalizarRegistroAdmin_(row, entidade);
+  }).sort(function(a, b) {
+    return String(a.nome).localeCompare(String(b.nome));
+  });
+
+  return sucesso_('listAdminRecords', {
+    entidade: entidade.nome,
+    records
+  });
+}
+
+function saveAdminRecord(payload) {
+  const entidade = obterEntidadeAdmin_(payload && payload.entidade);
+  const id = String(payload && payload.id || '').trim();
+  const nome = String(payload && payload.nome || '').trim();
+  const descricao = String(payload && payload.descricao || '').trim();
+  const status = normalizar_(payload && payload.status || 'ativo');
+
+  if (!nome) {
+    return erro_('INVALID_RECORD', 'Informe o nome.', 'saveAdminRecord');
+  }
+
+  if (['ativo', 'inativo'].indexOf(status) === -1) {
+    return erro_('INVALID_STATUS', 'Status inválido.', 'saveAdminRecord');
+  }
+
+  const sheet = obterPlanilha_().getSheetByName(entidade.sheet);
+  const headers = obterHeaders_(sheet);
+  validarColunasObrigatorias_(headers, [entidade.idCol, 'nome', 'descricao', 'status'], entidade.sheet);
+
+  const idCol = obterIndiceColuna_(headers, entidade.idCol);
+  const nomeCol = obterIndiceColuna_(headers, 'nome');
+  const descCol = obterIndiceColuna_(headers, 'descricao');
+  const statusCol = obterIndiceColuna_(headers, 'status');
+  const cadastroCol = obterIndiceColuna_(headers, 'data_cadastro');
+  const atualizacaoCol = obterIndiceColuna_(headers, 'data_atualizacao');
+  const values = sheet.getDataRange().getValues();
+  const agora = new Date();
+  let linha = -1;
+  let idFinal = id;
+
+  if (idFinal) {
+    for (let i = 1; i < values.length; i++) {
+      if (String(values[i][idCol] || '').trim() === idFinal) {
+        linha = i + 1;
+        break;
+      }
+    }
+  }
+
+  if (linha === -1) {
+    idFinal = idFinal || `${entidade.prefixo}_${Utilities.getUuid().slice(0, 8)}`;
+    const row = new Array(headers.length).fill('');
+    row[idCol] = idFinal;
+    row[nomeCol] = nome;
+    row[descCol] = descricao;
+    row[statusCol] = status;
+
+    if (cadastroCol >= 0) {
+      row[cadastroCol] = agora;
+    }
+
+    if (atualizacaoCol >= 0) {
+      row[atualizacaoCol] = agora;
+    }
+
+    sheet.appendRow(row);
+  } else {
+    sheet.getRange(linha, nomeCol + 1).setValue(nome);
+    sheet.getRange(linha, descCol + 1).setValue(descricao);
+    sheet.getRange(linha, statusCol + 1).setValue(status);
+
+    if (atualizacaoCol >= 0) {
+      sheet.getRange(linha, atualizacaoCol + 1).setValue(agora);
+    }
+  }
+
+  registrarAuditoria_('saveAdminRecord', entidade.sheet, JSON.stringify({
+    id: idFinal,
+    nome,
+    status
+  }));
+
+  return sucesso_('saveAdminRecord', {
+    entidade: entidade.nome,
+    record: {
+      id: idFinal,
+      nome,
+      descricao,
+      status
+    }
   });
 }
 
@@ -482,6 +596,39 @@ function obterDefinicaoConfig_(chave) {
   }
 
   return null;
+}
+
+function obterEntidadeAdmin_(entidade) {
+  const chave = normalizar_(entidade);
+  const entidades = {
+    categorias: {
+      nome: 'categorias',
+      sheet: 'Categorias',
+      idCol: 'id_categoria',
+      prefixo: 'cat'
+    },
+    grupos: {
+      nome: 'grupos',
+      sheet: 'Grupos',
+      idCol: 'id_grupo',
+      prefixo: 'grp'
+    }
+  };
+
+  if (!entidades[chave]) {
+    throw new Error('Entidade administrativa inválida.');
+  }
+
+  return entidades[chave];
+}
+
+function normalizarRegistroAdmin_(row, entidade) {
+  return {
+    id: row[entidade.idCol] || '',
+    nome: row.nome || '',
+    descricao: row.descricao || '',
+    status: row.status || ''
+  };
 }
 
 function validarValorConfig_(valor, definicao) {
