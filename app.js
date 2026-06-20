@@ -35,7 +35,7 @@ async function iniciarApp() {
     const response = await chamarApi('getInitialData');
 
     if (!response.ok) {
-      renderErro(response.message || response.error?.message || 'Acesso não autorizado.');
+      renderErro(obterMensagemApi(response, 'Acesso não autorizado.'));
       return;
     }
 
@@ -250,7 +250,7 @@ async function abrirAdministracao(preservarMensagem = false) {
     const response = await chamarApi('getAdminData');
 
     if (!response.ok) {
-      throw new Error(response.message || response.error?.message || 'Não foi possível carregar a administração.');
+      throw new Error(obterMensagemApi(response, 'Não foi possível carregar a administração.'));
     }
 
     state.admin.config = response.data.config || [];
@@ -612,7 +612,7 @@ async function carregarRegistrosAdmin(entidade) {
     });
 
     if (!response.ok) {
-      throw new Error(response.message || response.error?.message || 'Não foi possível carregar registros.');
+      throw new Error(obterMensagemApi(response, 'Não foi possível carregar registros.'));
     }
 
     state.admin[entidade] = response.data.records || [];
@@ -642,7 +642,7 @@ async function salvarRegistroAdmin(entidade, id) {
     });
 
     if (!response.ok) {
-      throw new Error(response.message || response.error?.message || 'Não foi possível salvar.');
+      throw new Error(obterMensagemApi(response, 'Não foi possível salvar.'));
     }
 
     state.admin.message = 'Registro salvo.';
@@ -701,7 +701,7 @@ async function salvarConfigAdmin(chave) {
     });
 
     if (!response.ok) {
-      throw new Error(response.message || response.error?.message || 'Não foi possível salvar.');
+      throw new Error(obterMensagemApi(response, 'Não foi possível salvar.'));
     }
 
     state.config = response.data.config || state.config;
@@ -719,7 +719,7 @@ async function restaurarCoresPadrao() {
     const response = await chamarApi('restoreDefaultColors');
 
     if (!response.ok) {
-      throw new Error(response.message || response.error?.message || 'Não foi possível restaurar as cores.');
+      throw new Error(obterMensagemApi(response, 'Não foi possível restaurar as cores.'));
     }
 
     state.config = response.data.config || state.config;
@@ -748,4 +748,21 @@ function escapeHtml(texto) {
 
 function escapeAttr(texto) {
   return escapeHtml(texto).replace(/`/g, '&#096;');
+}
+
+function obterMensagemApi(response, fallback) {
+  const code = response?.error?.code;
+  const mensagens = {
+    USER_EMAIL_NOT_AVAILABLE: 'Não foi possível identificar sua Conta Google.',
+    USER_NOT_REGISTERED: 'Seu usuário não está cadastrado no painel.',
+    USER_INACTIVE: 'Seu usuário está inativo.',
+    GESTOR_REQUIRED: 'Acesso permitido apenas para gestor.',
+    INVALID_SHEET_HEADERS: 'A planilha está com cabeçalhos obrigatórios ausentes.',
+    ACTION_NOT_FOUND: 'Ação não reconhecida pela API publicada.',
+    CONFIG_NOT_ALLOWED: 'Esta configuração não pode ser alterada manualmente.',
+    INVALID_RECORD: 'Informe os dados obrigatórios.',
+    INVALID_STATUS: 'Status inválido.'
+  };
+
+  return mensagens[code] || response?.message || response?.error?.message || fallback;
 }
