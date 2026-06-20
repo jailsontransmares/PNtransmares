@@ -682,6 +682,64 @@ body.dark .brand h1 {
   color: var(--cor-destaque);
 }
 
+.password-list {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.password-row {
+  border: 1px solid var(--borda);
+  border-bottom: 4px solid var(--cor-destaque);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.8fr) auto;
+  padding: 10px 48px 10px 10px;
+  position: relative;
+}
+
+.password-row.status-line-inativo {
+  border-bottom-color: #9CA3AF;
+}
+
+.password-row h3 {
+  font-size: 14px;
+  margin: 2px 0;
+}
+
+.password-row p {
+  color: var(--texto-suave);
+  font-size: 12px;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.password-row small {
+  color: var(--texto-suave);
+  font-size: 10px;
+}
+
+.password-row .crud-actions {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+}
+
+.password-fields {
+  display: grid;
+  gap: 6px;
+}
+
+.password-fields span {
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  color: var(--texto);
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
 .link-group-label {
   color: var(--texto-suave);
   font-size: 10px;
@@ -807,7 +865,9 @@ body.dark .brand h1 {
   }
 
   .links-toolbar,
-  .links-list {
+  .links-list,
+  .password-list,
+  .password-row {
     grid-template-columns: 1fr;
   }
 }
