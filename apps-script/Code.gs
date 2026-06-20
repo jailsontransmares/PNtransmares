@@ -26,6 +26,8 @@ const SHEET_HEADERS = {
     'titulo',
     'descricao',
     'url',
+    'login',
+    'senha',
     'categoria',
     'grupo',
     'status',
@@ -220,6 +222,13 @@ function doGet(e) {
       case 'diagnosticoFase3':
         exigirGestor_();
         result = diagnosticoFase3();
+        break;
+      case 'getPasswordsData':
+        result = getPasswordsData(payload);
+        break;
+      case 'savePasswordItem':
+        exigirGestor_();
+        result = savePasswordItem(payload);
         break;
       default:
         result = erro_('ACTION_NOT_FOUND', 'Ação não encontrada.', action);
@@ -657,6 +666,145 @@ function toggleFavoriteLink(payload) {
   return erro_('LINK_NOT_FOUND', 'Link não encontrado.', 'toggleFavoriteLink');
 }
 
+function getPasswordsData(payload) {
+  garantirAbasBase();
+  const usuario = obterUsuarioAutorizado_();
+  const gestor = normalizar_(usuario.perfil) === 'gestor';
+  const filtros = {
+    categoria: String(payload && payload.categoria || '').trim(),
+    grupo: String(payload && payload.grupo || '').trim(),
+    status: normalizar_(payload && payload.status || '')
+  };
+
+  return sucesso_('getPasswordsData', {
+    usuario: {
+      perfil: usuario.perfil,
+      gestor
+    },
+    categorias: listarRegistrosAtivosAdmin_('categorias'),
+    grupos: listarRegistrosAtivosAdmin_('grupos'),
+    acessos: listarAcessosSenha_({
+      filtros,
+      gestor
+    })
+  });
+}
+
+function savePasswordItem(payload) {
+  garantirAbasBase();
+  const usuario = obterUsuarioAutorizado_();
+  const id = String(payload && payload.id || '').trim();
+  const titulo = String(payload && payload.titulo || '').trim();
+  const descricao = String(payload && payload.descricao || '').trim();
+  const url = String(payload && payload.url || '').trim();
+  const login = String(payload && payload.login || '').trim();
+  const senha = String(payload && payload.senha || '').trim();
+  const categoria = String(payload && payload.categoria || '').trim();
+  const grupo = String(payload && payload.grupo || '').trim();
+  const status = normalizar_(payload && payload.status || 'ativo');
+
+  if (!titulo) {
+    return erro_('INVALID_PASSWORD_ITEM', 'Informe o título.', 'savePasswordItem');
+  }
+
+  if (!login) {
+    return erro_('INVALID_LOGIN', 'Informe o usuário/login.', 'savePasswordItem');
+  }
+
+  if (!senha) {
+    return erro_('INVALID_PASSWORD', 'Informe a senha.', 'savePasswordItem');
+  }
+
+  if (url && !/^https?:\/\//i.test(url)) {
+    return erro_('INVALID_URL', 'Informe uma URL começando com http:// ou https://.', 'savePasswordItem');
+  }
+
+  if (['ativo', 'inativo'].indexOf(status) === -1) {
+    return erro_('INVALID_STATUS', 'Status inválido.', 'savePasswordItem');
+  }
+
+  const sheet = obterPlanilha_().getSheetByName('Itens');
+  const headers = obterHeaders_(sheet);
+  validarColunasObrigatorias_(headers, ['id_item', 'tipo', 'titulo', 'descricao', 'url', 'login', 'senha', 'categoria', 'grupo', 'status'], 'Itens');
+  const cols = obterMapaColunas_(headers);
+  const values = sheet.getDataRange().getValues();
+  const agora = new Date();
+  let linha = -1;
+  let idFinal = id;
+
+  if (idFinal) {
+    for (let i = 1; i < values.length; i++) {
+      if (String(values[i][cols.id_item] || '').trim() === idFinal) {
+        linha = i + 1;
+        break;
+      }
+    }
+  }
+
+  if (linha === -1) {
+    idFinal = idFinal || `senha_${Utilities.getUuid().slice(0, 8)}`;
+    const row = new Array(headers.length).fill('');
+    row[cols.id_item] = idFinal;
+    row[cols.tipo] = 'senha_acesso';
+    row[cols.titulo] = titulo;
+    row[cols.descricao] = descricao;
+    row[cols.url] = url;
+    row[cols.login] = login;
+    row[cols.senha] = senha;
+    row[cols.categoria] = categoria;
+    row[cols.grupo] = grupo;
+    row[cols.status] = status;
+
+    if (cols.criado_por >= 0) {
+      row[cols.criado_por] = usuario.email;
+    }
+
+    if (cols.data_cadastro >= 0) {
+      row[cols.data_cadastro] = agora;
+    }
+
+    if (cols.data_atualizacao >= 0) {
+      row[cols.data_atualizacao] = agora;
+    }
+
+    sheet.appendRow(row);
+  } else {
+    sheet.getRange(linha, cols.tipo + 1).setValue('senha_acesso');
+    sheet.getRange(linha, cols.titulo + 1).setValue(titulo);
+    sheet.getRange(linha, cols.descricao + 1).setValue(descricao);
+    sheet.getRange(linha, cols.url + 1).setValue(url);
+    sheet.getRange(linha, cols.login + 1).setValue(login);
+    sheet.getRange(linha, cols.senha + 1).setValue(senha);
+    sheet.getRange(linha, cols.categoria + 1).setValue(categoria);
+    sheet.getRange(linha, cols.grupo + 1).setValue(grupo);
+    sheet.getRange(linha, cols.status + 1).setValue(status);
+
+    if (cols.data_atualizacao >= 0) {
+      sheet.getRange(linha, cols.data_atualizacao + 1).setValue(agora);
+    }
+  }
+
+  registrarAuditoria_('savePasswordItem', 'Itens', JSON.stringify({
+    id: idFinal,
+    titulo,
+    status
+  }));
+
+  return sucesso_('savePasswordItem', {
+    item: {
+      id: idFinal,
+      titulo,
+      descricao,
+      url,
+      login,
+      senha,
+      categoria,
+      grupo,
+      status
+    }
+  });
+}
+
 function garantirAbasBase() {
   const ss = obterPlanilha_();
   const criadas = [];
@@ -917,6 +1065,54 @@ function obterIdsFavoritosUsuario_(email) {
   }).map(function(item) {
     return item.id_item || '';
   }).filter(Boolean);
+}
+
+function listarAcessosSenha_(options) {
+  const sheet = obterPlanilha_().getSheetByName('Itens');
+
+  if (!sheet) {
+    return [];
+  }
+
+  const filtros = options.filtros || {};
+
+  return lerAbaComoObjetos_(sheet).filter(function(item) {
+    if (normalizar_(item.tipo) !== 'senha_acesso') {
+      return false;
+    }
+
+    if (!options.gestor && normalizar_(item.status) !== 'ativo') {
+      return false;
+    }
+
+    if (filtros.status && normalizar_(item.status) !== filtros.status) {
+      return false;
+    }
+
+    if (filtros.categoria && String(item.categoria || '') !== filtros.categoria) {
+      return false;
+    }
+
+    if (filtros.grupo && String(item.grupo || '') !== filtros.grupo) {
+      return false;
+    }
+
+    return true;
+  }).map(function(item) {
+    return {
+      id: item.id_item || '',
+      titulo: item.titulo || '',
+      descricao: item.descricao || '',
+      url: item.url || '',
+      login: item.login || '',
+      senha: item.senha || '',
+      categoria: item.categoria || '',
+      grupo: item.grupo || '',
+      status: item.status || ''
+    };
+  }).sort(function(a, b) {
+    return String(a.titulo).localeCompare(String(b.titulo));
+  });
 }
 
 function parseListaEmails_(valor) {
