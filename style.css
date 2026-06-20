@@ -249,9 +249,9 @@ body.dark .brand h1 {
   border: 1px solid var(--borda);
   border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;
-  min-height: 38px;
-  padding: 8px 12px;
+  font-size: 13px;
+  min-height: 34px;
+  padding: 6px 10px;
 }
 
 .secondary-btn {
@@ -311,7 +311,7 @@ body.dark .brand h1 {
 }
 
 .admin-panel {
-  padding: 18px;
+  padding: 14px;
 }
 
 .admin-panel-header {
@@ -319,7 +319,7 @@ body.dark .brand h1 {
   display: flex;
   gap: 16px;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .admin-panel-header h2 {
@@ -342,41 +342,66 @@ body.dark .brand h1 {
   padding: 10px 12px;
 }
 
+.config-groups {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.config-group {
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.config-group-header {
+  border-bottom: 1px solid var(--borda);
+  margin: 0 0 8px;
+  padding: 0 0 8px;
+}
+
+.config-group-header h3 {
+  font-size: 15px;
+  margin: 0;
+}
+
 .config-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .config-row {
-  border: 1px solid var(--borda);
+  border: 0;
   border-radius: 8px;
   display: grid;
-  gap: 14px;
-  grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.2fr);
-  padding: 12px;
+  gap: 8px;
+  grid-template-columns: minmax(150px, 0.9fr) minmax(190px, 1.1fr);
+  padding: 6px;
 }
 
 .config-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
 }
 
 .config-info strong {
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
 
 .config-info span {
   color: var(--texto-suave);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.35;
 }
 
 .config-control {
   align-items: center;
   display: grid;
-  gap: 8px;
+  gap: 6px;
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
@@ -386,9 +411,10 @@ body.dark .brand h1 {
   border-radius: 8px;
   color: var(--texto);
   font: inherit;
-  min-height: 38px;
+  font-size: 13px;
+  min-height: 34px;
   min-width: 0;
-  padding: 8px 10px;
+  padding: 6px 8px;
   width: 100%;
 }
 
@@ -424,6 +450,7 @@ body.dark .brand h1 {
   }
 
   .admin-shell,
+  .config-groups,
   .config-row {
     grid-template-columns: 1fr;
   }
