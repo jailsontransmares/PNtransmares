@@ -584,6 +584,77 @@ body.dark .brand h1 {
   margin-top: 4px;
 }
 
+.links-toolbar {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(150px, 1fr)) auto;
+  margin-bottom: 14px;
+}
+
+.links-list {
+  display: grid;
+  gap: 10px;
+}
+
+.link-row {
+  align-items: start;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(260px, 1fr) minmax(220px, 0.8fr) auto;
+  padding: 12px;
+}
+
+.link-row.editing {
+  background: color-mix(in srgb, var(--cor-principal) 5%, transparent);
+}
+
+.link-main {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.link-main h3 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.link-main p {
+  color: var(--texto-suave);
+  font-size: 13px;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.link-main a {
+  color: var(--cor-principal);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.link-meta {
+  display: grid;
+  gap: 6px;
+}
+
+.link-meta span {
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  color: var(--texto-suave);
+  font-size: 12px;
+  padding: 5px 8px;
+}
+
+.link-modal {
+  max-width: 520px;
+  width: min(520px, 100%);
+}
+
 @media (max-width: 800px) {
   #app {
     padding: 14px;
@@ -637,5 +708,10 @@ body.dark .brand h1 {
 
   .crud-actions {
     justify-content: flex-start;
+  }
+
+  .links-toolbar,
+  .link-row {
+    grid-template-columns: 1fr;
   }
 }
