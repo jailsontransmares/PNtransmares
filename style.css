@@ -1301,6 +1301,60 @@ body.dark .brand h1 {
   box-shadow: inset 0 0 0 2px rgba(11, 58, 102, 0.14);
 }
 
+.ar-autocomplete-wrap {
+  position: relative;
+  z-index: 5;
+}
+
+.ar-autocomplete-wrap > div {
+  position: relative;
+}
+
+.ar-suggestions {
+  background: white;
+  border: 1px solid #D7E0EA;
+  border-radius: 10px;
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.16);
+  display: grid;
+  gap: 4px;
+  left: 0;
+  max-height: 238px;
+  overflow: auto;
+  padding: 6px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+}
+
+.ar-suggestions button {
+  background: #F8FAFC;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #111827;
+  cursor: pointer;
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.ar-suggestions button:hover {
+  background: #EAF2F8;
+  border-color: #B8C9DA;
+}
+
+.ar-suggestions strong {
+  font-size: 13px;
+}
+
+.ar-suggestions span,
+.ar-suggestions p {
+  color: #64748B;
+  font-size: 12px;
+  margin: 0;
+}
+
 .ar-mvp-band,
 .ar-mvp-price {
   border-radius: 8px;
@@ -1355,6 +1409,46 @@ body.dark .brand h1 {
 .ar-mvp .ar-result article {
   background: white;
   border-radius: 8px;
+}
+
+.ar-mvp .ar-mvp-line label,
+.ar-mvp .ar-mvp-fields label span {
+  background: linear-gradient(135deg, #0B3A66, #155C93);
+  border: 0;
+}
+
+.ar-mvp .ar-mvp-line,
+.ar-mvp .ar-mvp-fields label {
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+}
+
+.ar-mvp .ar-mvp-line div {
+  background: #F8FAFC;
+}
+
+.ar-mvp .ar-mvp-input {
+  background: #F8FAFC;
+  border-radius: 0;
+}
+
+.ar-mvp .ar-mvp-band strong,
+.ar-mvp .ar-mvp-price strong {
+  background: linear-gradient(135deg, #0B3A66, #123C69);
+}
+
+.ar-mvp .ar-mvp-price.discount strong,
+.ar-mvp .ar-mvp-price.discount span {
+  background: linear-gradient(135deg, #D60000, #EF4444);
+}
+
+.ar-mvp .ar-mvp-price.full strong,
+.ar-mvp .ar-mvp-price.full span {
+  background: linear-gradient(135deg, #4B5563, #6B7280);
+}
+
+.ar-mvp .ar-mvp-price.economy strong,
+.ar-mvp .ar-mvp-price.economy span {
+  background: linear-gradient(135deg, #15803D, #16A34A);
 }
 
 .ar-audit-row {
