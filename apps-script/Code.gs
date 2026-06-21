@@ -73,17 +73,34 @@ const SHEET_HEADERS = {
   Parceiros: [
     'id_parceiro',
     'nome',
+    'nome_empresa',
     'codigo_revendedor',
     'status',
+    'remunerado',
+    'whatsapp_pessoal',
+    'whatsapp_comercial',
+    'email_comercial',
+    'observacao',
     'data_cadastro',
     'data_atualizacao'
   ],
   Historico_Links: [
     'id_historico',
     'data_geracao',
+    'usuario',
     'parceiro',
+    'codigo_revendedor',
     'produto',
+    'product_id',
+    'ac',
+    'modelo',
+    'validade',
+    'grupo',
     'link',
+    'link_com_desconto',
+    'link_sem_desconto',
+    'preco_com_desconto',
+    'preco_sem_desconto',
     'status'
   ],
   Avisos_Internos: [
@@ -144,7 +161,12 @@ const CONFIG_PADRAO = [
   ['retencao_historico_meses', '12', 'Tempo de retenção do histórico em meses.', 'numero'],
   ['janela_aniversarios_dias', '15', 'Janela de próximos aniversários em dias.', 'numero'],
   ['limite_aniversariantes', '25', 'Quantidade máxima de aniversariantes exibidos.', 'numero'],
-  ['limite_avisos', '3', 'Quantidade máxima de avisos ativos exibidos no painel.', 'numero']
+  ['limite_avisos', '3', 'Quantidade máxima de avisos ativos exibidos no painel.', 'numero'],
+  ['ar_produtos_spreadsheet_id', '1olfAYqFNswgvnvPdNWp7bZ0IEJ1DKYj2z6ZiPvKcjjk', 'ID da planilha de produtos do Painel AR.', 'texto'],
+  ['ar_produtos_sheet_name', 'Produtos', 'Nome da aba de produtos do Painel AR.', 'texto'],
+  ['ar_link_com_desconto_template', '', 'Template padrão do link AR com desconto.', 'texto'],
+  ['ar_link_sem_desconto_template', '', 'Template padrão do link AR sem desconto.', 'texto'],
+  ['ar_link_templates_json', '', 'Templates de links AR em lote por grupo/código.', 'texto']
 ];
 
 function doGet(e) {
@@ -233,6 +255,16 @@ function doGet(e) {
       case 'diagnosticoFase4':
         exigirGestor_();
         result = diagnosticoFase4();
+        break;
+      case 'getArData':
+        result = getArData(payload);
+        break;
+      case 'generateArLinks':
+        result = generateArLinks(payload);
+        break;
+      case 'diagnosticoFase5':
+        exigirGestor_();
+        result = diagnosticoFase5();
         break;
       default:
         result = erro_('ACTION_NOT_FOUND', 'Ação não encontrada.', action);
@@ -836,6 +868,140 @@ function diagnosticoFase4() {
   });
 }
 
+function getArData(payload) {
+  garantirAbasBase();
+  garantirConfigPadrao();
+  const usuario = obterUsuarioAutorizado_();
+  const gestor = normalizar_(usuario.perfil) === 'gestor';
+  const config = obterConfig();
+  const produtos = listarProdutosAr_(config);
+  const parceiros = listarParceirosAr_();
+
+  return sucesso_('getArData', {
+    usuario: {
+      perfil: usuario.perfil,
+      gestor
+    },
+    produtos,
+    parceiros,
+    historico: gestor ? listarHistoricoAr_(10) : [],
+    meta: {
+      produtos_total: produtos.length,
+      parceiros_total: parceiros.length,
+      templates_configurados: Boolean(config.ar_link_com_desconto_template && config.ar_link_sem_desconto_template)
+        || Boolean(String(config.ar_link_templates_json || '').trim())
+    }
+  });
+}
+
+function generateArLinks(payload) {
+  garantirAbasBase();
+  const usuario = obterUsuarioAutorizado_();
+  const config = obterConfig();
+  const produtoId = String(payload && payload.produto_id || '').trim();
+  const parceiroId = String(payload && payload.parceiro_id || '').trim();
+  const produto = obterProdutoArPorId_(config, produtoId);
+  const parceiro = obterParceiroArPorId_(parceiroId);
+  const alertas = [];
+
+  if (!produto) {
+    return erro_('AR_PRODUCT_REQUIRED', 'Selecione um produto válido.', 'generateArLinks');
+  }
+
+  if (!parceiro) {
+    return erro_('AR_PARTNER_REQUIRED', 'Selecione um parceiro válido.', 'generateArLinks');
+  }
+
+  if (!produto.product_id) {
+    return erro_('AR_PRODUCT_WITHOUT_ID', 'Produto sem Product ID. O link não será gerado.', 'generateArLinks');
+  }
+
+  if (!parceiro.codigo_revendedor) {
+    return erro_('AR_PARTNER_WITHOUT_CODE', 'Parceiro sem código revendedor. O link não será gerado.', 'generateArLinks');
+  }
+
+  const statusParceiro = normalizar_(parceiro.status);
+
+  if (statusParceiro === 'inativo') {
+    return erro_('AR_PARTNER_INACTIVE', 'Parceiro inativo. O link não será gerado.', 'generateArLinks');
+  }
+
+  if (statusParceiro.indexOf('pendente') >= 0) {
+    alertas.push('Parceiro com cadastro pendente. Confira antes de usar o link.');
+  }
+
+  if (!produto.preco_com_desconto || !produto.preco_sem_desconto) {
+    alertas.push('Produto com preço incompleto.');
+  }
+
+  const templates = obterTemplatesAr_(config, produto);
+
+  if (!templates.com_desconto || !templates.sem_desconto) {
+    return erro_('AR_TEMPLATE_MISSING', 'Templates de link AR não configurados.', 'generateArLinks');
+  }
+
+  const variaveis = obterVariaveisTemplateAr_(produto, parceiro);
+  const linkComDesconto = aplicarTemplateAr_(templates.com_desconto, variaveis);
+  const linkSemDesconto = aplicarTemplateAr_(templates.sem_desconto, variaveis);
+
+  salvarHistoricoAr_(usuario, produto, parceiro, linkComDesconto, linkSemDesconto);
+  registrarAuditoria_('generateArLinks', 'Historico_Links', JSON.stringify({
+    produto: produto.descricao_comercial,
+    product_id: produto.product_id,
+    parceiro: parceiro.nome,
+    codigo_revendedor: parceiro.codigo_revendedor
+  }));
+
+  return sucesso_('generateArLinks', {
+    produto,
+    parceiro,
+    links: {
+      com_desconto: linkComDesconto,
+      sem_desconto: linkSemDesconto
+    },
+    alertas
+  });
+}
+
+function diagnosticoFase5() {
+  garantirAbasBase();
+  garantirConfigPadrao();
+  const config = obterConfig();
+  const produtos = listarProdutosAr_(config);
+  const parceiros = listarParceirosAr_();
+
+  return sucesso_('diagnosticoFase5', {
+    produtos: {
+      total: produtos.length,
+      incompletos: produtos.filter(function(produto) {
+        return produto.alertas.length > 0;
+      }).length
+    },
+    parceiros: {
+      total: parceiros.length,
+      ativos: parceiros.filter(function(parceiro) {
+        return normalizar_(parceiro.status) === 'ativo';
+      }).length,
+      sem_codigo: parceiros.filter(function(parceiro) {
+        return !parceiro.codigo_revendedor;
+      }).length
+    },
+    historico: listarHistoricoAr_(5),
+    configs: {
+      ar_produtos_spreadsheet_id: config.ar_produtos_spreadsheet_id || '',
+      ar_produtos_sheet_name: config.ar_produtos_sheet_name || '',
+      templates_configurados: Boolean(config.ar_link_com_desconto_template && config.ar_link_sem_desconto_template)
+        || Boolean(String(config.ar_link_templates_json || '').trim())
+    },
+    endpoints: [
+      'getArData',
+      'generateArLinks',
+      'diagnosticoFase5'
+    ],
+    timestamp: new Date().toISOString()
+  });
+}
+
 function garantirAbasBase() {
   const ss = obterPlanilha_();
   const criadas = [];
@@ -1202,6 +1368,316 @@ function parseJsonSeguro_(texto) {
   } catch (error) {
     return {};
   }
+}
+
+function listarProdutosAr_(config) {
+  const sheet = obterSheetProdutosAr_(config);
+
+  if (!sheet) {
+    return [];
+  }
+
+  const values = sheet.getDataRange().getValues();
+
+  if (values.length < 2) {
+    return [];
+  }
+
+  const headers = values[0].map(function(header) {
+    return String(header || '').trim();
+  });
+
+  return values.slice(1).map(function(row, index) {
+    return normalizarProdutoAr_(row, headers, index + 2);
+  }).filter(function(produto) {
+    return produto.tem_dados && produto.ativo;
+  });
+}
+
+function obterProdutoArPorId_(config, produtoId) {
+  if (!produtoId) {
+    return null;
+  }
+
+  const produtos = listarProdutosAr_(config);
+
+  for (let i = 0; i < produtos.length; i++) {
+    if (produtos[i].id === produtoId) {
+      return produtos[i];
+    }
+  }
+
+  return null;
+}
+
+function obterSheetProdutosAr_(config) {
+  const spreadsheetId = String(config.ar_produtos_spreadsheet_id || '').trim();
+
+  if (!spreadsheetId) {
+    return null;
+  }
+
+  const ss = SpreadsheetApp.openById(spreadsheetId);
+  const nomeAba = String(config.ar_produtos_sheet_name || 'Produtos').trim();
+
+  return ss.getSheetByName(nomeAba)
+    || ss.getSheetByName('Produtos')
+    || ss.getSheetByName('produtos_ar')
+    || ss.getSheets()[0];
+}
+
+function normalizarProdutoAr_(row, headers, rowNumber) {
+  const produto = {
+    id: `produto_${rowNumber}`,
+    row_number: rowNumber,
+    product_id: obterValorAlias_(row, headers, ['product_id', 'product id', 'id_produto', 'produto_id', 'codigo_produto']),
+    descricao_comercial: obterValorAlias_(row, headers, ['descricao_comercial', 'descrição comercial', 'descricao', 'descrição', 'produto', 'nome']),
+    ac: obterValorAlias_(row, headers, ['ac', 'autoridade_certificadora', 'autoridade certificadora']),
+    tipo_certificado: obterValorAlias_(row, headers, ['tipo_certificado', 'tipo certificado', 'tipo']),
+    midia: obterValorAlias_(row, headers, ['midia', 'mídia']),
+    modelo: obterValorAlias_(row, headers, ['modelo']),
+    validade: obterValorAlias_(row, headers, ['validade', 'prazo']),
+    grupo: obterValorAlias_(row, headers, ['grupo', 'grupo_nome', 'nome_grupo']),
+    codigo_grupo: obterValorAlias_(row, headers, ['codigo_grupo', 'código grupo', 'cod_grupo', 'grupo_codigo', 'grupo código', 'codigo', 'código']),
+    preco_com_desconto: obterValorAlias_(row, headers, ['preco_com_desconto', 'preço com desconto', 'valor_com_desconto', 'valor com desconto', 'com desconto']),
+    preco_sem_desconto: obterValorAlias_(row, headers, ['preco_sem_desconto', 'preço sem desconto', 'valor_sem_desconto', 'valor sem desconto', 'sem desconto']),
+    ativo_raw: obterValorAlias_(row, headers, ['ativo', 'status']),
+    observacao: obterValorAlias_(row, headers, ['observacao', 'observação', 'obs'])
+  };
+
+  produto.tem_dados = row.some(function(value) {
+    return value !== '';
+  });
+  produto.ativo = valorAtivoAr_(produto.ativo_raw);
+  produto.economia = calcularEconomiaAr_(produto.preco_com_desconto, produto.preco_sem_desconto);
+  produto.alertas = [];
+
+  if (!produto.product_id) {
+    produto.alertas.push('Produto sem Product ID.');
+  }
+
+  if (!produto.preco_com_desconto || !produto.preco_sem_desconto) {
+    produto.alertas.push('Preço incompleto.');
+  }
+
+  return produto;
+}
+
+function listarParceirosAr_() {
+  const sheet = obterPlanilha_().getSheetByName('Parceiros');
+
+  if (!sheet) {
+    return [];
+  }
+
+  return lerAbaComoObjetos_(sheet).map(function(row, index) {
+    const id = row.id_parceiro || `parceiro_${index + 2}`;
+    const status = row.status || (row.codigo_revendedor ? 'Ativo' : 'Pendente de código');
+
+    return {
+      id,
+      nome: row.nome || row.nome_completo || '',
+      nome_empresa: row.nome_empresa || '',
+      codigo_revendedor: row.codigo_revendedor || '',
+      status,
+      remunerado: row.remunerado || '',
+      whatsapp_pessoal: row.whatsapp_pessoal || '',
+      whatsapp_comercial: row.whatsapp_comercial || '',
+      email_comercial: row.email_comercial || '',
+      observacao: row.observacao || ''
+    };
+  }).filter(function(parceiro) {
+    return parceiro.nome;
+  }).sort(function(a, b) {
+    return String(a.nome).localeCompare(String(b.nome));
+  });
+}
+
+function obterParceiroArPorId_(parceiroId) {
+  const parceiros = listarParceirosAr_();
+
+  for (let i = 0; i < parceiros.length; i++) {
+    if (String(parceiros[i].id) === String(parceiroId)) {
+      return parceiros[i];
+    }
+  }
+
+  return null;
+}
+
+function obterTemplatesAr_(config, produto) {
+  const templatesLote = parseJsonSeguro_(config.ar_link_templates_json);
+  const chaves = [
+    produto.codigo_grupo,
+    produto.grupo,
+    normalizarChaveAr_(produto.codigo_grupo),
+    normalizarChaveAr_(produto.grupo),
+    'padrao',
+    'padrão',
+    'default'
+  ].filter(Boolean);
+
+  for (let i = 0; i < chaves.length; i++) {
+    const item = templatesLote[chaves[i]];
+
+    if (item) {
+      return {
+        com_desconto: item.com_desconto || item.link_com_desconto || item.desconto || '',
+        sem_desconto: item.sem_desconto || item.link_sem_desconto || item.sem_desconto || ''
+      };
+    }
+  }
+
+  return {
+    com_desconto: config.ar_link_com_desconto_template || '',
+    sem_desconto: config.ar_link_sem_desconto_template || ''
+  };
+}
+
+function obterVariaveisTemplateAr_(produto, parceiro) {
+  return {
+    product_id: produto.product_id,
+    codigo_revendedor: parceiro.codigo_revendedor,
+    grupo: produto.grupo,
+    codigo_grupo: produto.codigo_grupo,
+    preco_com_desconto: produto.preco_com_desconto,
+    preco_sem_desconto: produto.preco_sem_desconto,
+    modelo: produto.modelo,
+    validade: produto.validade,
+    ac: produto.ac
+  };
+}
+
+function aplicarTemplateAr_(template, variaveis) {
+  return String(template || '').replace(/\{([a-zA-Z0-9_]+)\}/g, function(match, chave) {
+    return variaveis[chave] == null ? '' : String(variaveis[chave]);
+  });
+}
+
+function salvarHistoricoAr_(usuario, produto, parceiro, linkComDesconto, linkSemDesconto) {
+  const sheet = obterPlanilha_().getSheetByName('Historico_Links');
+
+  if (!sheet) {
+    return;
+  }
+
+  const headers = obterHeaders_(sheet);
+  const cols = obterMapaColunas_(headers);
+  const row = new Array(headers.length).fill('');
+  const set = function(nome, valor) {
+    if (cols[nome] >= 0) {
+      row[cols[nome]] = valor;
+    }
+  };
+
+  set('id_historico', Utilities.getUuid());
+  set('data_geracao', new Date());
+  set('usuario', usuario.email || '');
+  set('parceiro', parceiro.nome || '');
+  set('codigo_revendedor', parceiro.codigo_revendedor || '');
+  set('produto', produto.descricao_comercial || '');
+  set('product_id', produto.product_id || '');
+  set('ac', produto.ac || '');
+  set('modelo', produto.modelo || '');
+  set('validade', produto.validade || '');
+  set('grupo', produto.codigo_grupo || produto.grupo || '');
+  set('link', linkComDesconto || linkSemDesconto || '');
+  set('link_com_desconto', linkComDesconto || '');
+  set('link_sem_desconto', linkSemDesconto || '');
+  set('preco_com_desconto', produto.preco_com_desconto || '');
+  set('preco_sem_desconto', produto.preco_sem_desconto || '');
+  set('status', 'gerado');
+
+  sheet.appendRow(row);
+}
+
+function listarHistoricoAr_(limite) {
+  const sheet = obterPlanilha_().getSheetByName('Historico_Links');
+
+  if (!sheet) {
+    return [];
+  }
+
+  return lerAbaComoObjetos_(sheet).sort(function(a, b) {
+    const dataA = converterData_(a.data_geracao);
+    const dataB = converterData_(b.data_geracao);
+    return (dataB ? dataB.getTime() : 0) - (dataA ? dataA.getTime() : 0);
+  }).slice(0, limite || 10).map(function(row) {
+    return {
+      data_geracao: formatarDataHora_(row.data_geracao),
+      usuario: row.usuario || '',
+      parceiro: row.parceiro || '',
+      produto: row.produto || '',
+      product_id: row.product_id || '',
+      grupo: row.grupo || '',
+      status: row.status || ''
+    };
+  });
+}
+
+function obterValorAlias_(row, headers, aliases) {
+  const mapa = {};
+
+  headers.forEach(function(header, index) {
+    mapa[normalizarChaveAr_(header)] = index;
+  });
+
+  for (let i = 0; i < aliases.length; i++) {
+    const index = mapa[normalizarChaveAr_(aliases[i])];
+
+    if (index !== undefined) {
+      return row[index] == null ? '' : String(row[index]).trim();
+    }
+  }
+
+  return '';
+}
+
+function normalizarChaveAr_(valor) {
+  return String(valor || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function valorAtivoAr_(valor) {
+  const texto = normalizarChaveAr_(valor);
+
+  if (!texto) {
+    return true;
+  }
+
+  return ['ativo', 'sim', 's', 'yes', 'true', '1'].indexOf(texto) >= 0;
+}
+
+function calcularEconomiaAr_(comDesconto, semDesconto) {
+  const com = parseNumeroAr_(comDesconto);
+  const sem = parseNumeroAr_(semDesconto);
+
+  if (com == null || sem == null) {
+    return '';
+  }
+
+  return String(Math.max(sem - com, 0).toFixed(2)).replace('.', ',');
+}
+
+function parseNumeroAr_(valor) {
+  if (valor === '' || valor == null) {
+    return null;
+  }
+
+  const texto = String(valor || '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
+
+  if (!texto) {
+    return null;
+  }
+
+  const numero = Number(texto);
+
+  return isNaN(numero) ? null : numero;
 }
 
 function parseListaEmails_(valor) {
