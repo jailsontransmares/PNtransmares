@@ -592,6 +592,52 @@ body.dark .brand h1 {
   margin-bottom: 14px;
 }
 
+.module-tabs {
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+}
+
+.module-tabs button {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--texto-suave);
+  cursor: pointer;
+  font-weight: 700;
+  padding: 7px 10px;
+}
+
+.module-tabs button.active {
+  background: var(--card);
+  color: var(--cor-principal);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+
+.module-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -2px 0 12px;
+}
+
+.module-stats span {
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  color: var(--texto-suave);
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.module-stats strong {
+  color: var(--texto);
+  font-size: 14px;
+}
+
 .links-list {
   display: grid;
   gap: 10px;
@@ -741,6 +787,31 @@ body.dark .brand h1 {
   padding: 6px 8px;
 }
 
+.audit-list {
+  display: grid;
+  gap: 8px;
+}
+
+.audit-row {
+  align-items: center;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 120px 1fr 80px 80px minmax(180px, 1fr);
+  padding: 9px 10px;
+}
+
+.audit-row span,
+.audit-row small {
+  color: var(--texto-suave);
+  font-size: 12px;
+}
+
+.audit-row strong {
+  font-size: 13px;
+}
+
 .modal-inline-grid {
   display: grid;
   gap: 8px;
@@ -876,7 +947,12 @@ body.dark .brand h1 {
   .links-list,
   .password-list,
   .password-row,
-  .modal-inline-grid {
+  .modal-inline-grid,
+  .audit-row {
     grid-template-columns: 1fr;
+  }
+
+  .module-tabs {
+    width: 100%;
   }
 }
