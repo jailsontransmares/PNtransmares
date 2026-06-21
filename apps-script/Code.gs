@@ -73,26 +73,39 @@ const SHEET_HEADERS = {
   Parceiros: [
     'id_parceiro',
     'nome',
+    'nome_completo',
     'nome_empresa',
+    'cnpj_empresa',
     'codigo_revendedor',
+    'email_cadastro_certificado',
     'status',
     'remunerado',
     'whatsapp_pessoal',
     'whatsapp_comercial',
     'email_comercial',
+    'chave_pix',
+    'nome_chave_pix',
     'observacao',
+    'observacoes',
     'data_cadastro',
-    'data_atualizacao'
+    'data_atualizacao',
+    'atualizado_em'
   ],
   Historico_Links: [
     'id_historico',
     'data_geracao',
+    'data_hora',
     'usuario',
+    'usuario_email',
     'parceiro',
+    'parceiro_id',
     'codigo_revendedor',
+    'status_parceiro',
     'produto',
     'product_id',
     'ac',
+    'tipo_certificado',
+    'midia',
     'modelo',
     'validade',
     'grupo',
@@ -101,7 +114,10 @@ const SHEET_HEADERS = {
     'link_sem_desconto',
     'preco_com_desconto',
     'preco_sem_desconto',
-    'status'
+    'economia',
+    'status',
+    'origem',
+    'observacoes'
   ],
   Avisos_Internos: [
     'id_aviso',
@@ -164,8 +180,9 @@ const CONFIG_PADRAO = [
   ['limite_avisos', '3', 'Quantidade máxima de avisos ativos exibidos no painel.', 'numero'],
   ['ar_produtos_spreadsheet_id', '1olfAYqFNswgvnvPdNWp7bZ0IEJ1DKYj2z6ZiPvKcjjk', 'ID da planilha de produtos do Painel AR.', 'texto'],
   ['ar_produtos_sheet_name', 'Produtos', 'Nome da aba de produtos do Painel AR.', 'texto'],
-  ['ar_link_com_desconto_template', '', 'Template padrão do link AR com desconto.', 'texto'],
-  ['ar_link_sem_desconto_template', '', 'Template padrão do link AR sem desconto.', 'texto'],
+  ['ar_url_base_padrao', '', 'URL base padrão do Painel AR quando o produto não informar URL base.', 'texto'],
+  ['ar_link_com_desconto_template', '{url_base}?product_id={product_id}&codrev={codigo_revendedor}&grupo={grupo_com_desconto}', 'Template padrão do link AR com desconto.', 'texto'],
+  ['ar_link_sem_desconto_template', '{url_base}?product_id={product_id}&codrev={codigo_revendedor}&grupo={grupo_sem_desconto}', 'Template padrão do link AR sem desconto.', 'texto'],
   ['ar_link_templates_json', '', 'Templates de links AR em lote por grupo/código.', 'texto']
 ];
 
@@ -934,21 +951,18 @@ function generateArLinks(payload) {
     alertas.push('Produto com preço incompleto.');
   }
 
-  const templates = obterTemplatesAr_(config, produto);
+  const linkComDesconto = montarLinkAr_(config, produto, parceiro, 'com_desconto');
+  const linkSemDesconto = montarLinkAr_(config, produto, parceiro, 'sem_desconto');
 
-  if (!templates.com_desconto || !templates.sem_desconto) {
+  if (!linkComDesconto || !linkSemDesconto) {
     return erro_('AR_TEMPLATE_MISSING', 'Templates de link AR não configurados.', 'generateArLinks');
   }
 
-  const variaveis = obterVariaveisTemplateAr_(produto, parceiro);
-  const linkComDesconto = aplicarTemplateAr_(templates.com_desconto, variaveis);
-  const linkSemDesconto = aplicarTemplateAr_(templates.sem_desconto, variaveis);
-
-  salvarHistoricoAr_(usuario, produto, parceiro, linkComDesconto, linkSemDesconto);
+  const historico = salvarHistoricoAr_(usuario, produto, parceiro, linkComDesconto, linkSemDesconto);
   registrarAuditoria_('generateArLinks', 'Historico_Links', JSON.stringify({
     produto: produto.descricao_comercial,
     product_id: produto.product_id,
-    parceiro: parceiro.nome,
+    parceiro: parceiro.nome_completo || parceiro.nome,
     codigo_revendedor: parceiro.codigo_revendedor
   }));
 
@@ -959,6 +973,8 @@ function generateArLinks(payload) {
       com_desconto: linkComDesconto,
       sem_desconto: linkSemDesconto
     },
+    historico_salvo: true,
+    historico_id: historico && historico.id_historico || '',
     alertas
   });
 }
@@ -1429,6 +1445,7 @@ function obterSheetProdutosAr_(config) {
 function normalizarProdutoAr_(row, headers, rowNumber) {
   const produto = {
     id: `produto_${rowNumber}`,
+    _row: rowNumber,
     row_number: rowNumber,
     product_id: obterValorAlias_(row, headers, ['product_id', 'product id', 'id_produto', 'produto_id', 'codigo_produto']),
     descricao_comercial: obterValorAlias_(row, headers, ['descricao_comercial', 'descrição comercial', 'descricao', 'descrição', 'produto', 'nome']),
@@ -1441,10 +1458,17 @@ function normalizarProdutoAr_(row, headers, rowNumber) {
     codigo_grupo: obterValorAlias_(row, headers, ['codigo_grupo', 'código grupo', 'cod_grupo', 'grupo_codigo', 'grupo código', 'codigo', 'código']),
     preco_com_desconto: obterValorAlias_(row, headers, ['preco_com_desconto', 'preço com desconto', 'valor_com_desconto', 'valor com desconto', 'com desconto']),
     preco_sem_desconto: obterValorAlias_(row, headers, ['preco_sem_desconto', 'preço sem desconto', 'valor_sem_desconto', 'valor sem desconto', 'sem desconto']),
+    grupo_com_desconto: obterValorAlias_(row, headers, ['grupo_com_desconto', 'grupo com desconto', 'grupo_desconto']),
+    grupo_sem_desconto: obterValorAlias_(row, headers, ['grupo_sem_desconto', 'grupo sem desconto', 'grupo_sem_desconto']),
+    url_base: obterValorAlias_(row, headers, ['url_base', 'url base']),
     link_com_desconto: obterValorAlias_(row, headers, ['link_com_desconto', 'link com desconto', 'url_com_desconto', 'url com desconto']),
     link_sem_desconto: obterValorAlias_(row, headers, ['link_sem_desconto', 'link sem desconto', 'url_sem_desconto', 'url sem desconto']),
+    template_link_com_desconto: obterValorAlias_(row, headers, ['template_link_com_desconto', 'template link com desconto', 'template_com_desconto']),
+    template_link_sem_desconto: obterValorAlias_(row, headers, ['template_link_sem_desconto', 'template link sem desconto', 'template_sem_desconto']),
+    status: obterValorAlias_(row, headers, ['status']),
     ativo_raw: obterValorAlias_(row, headers, ['ativo', 'status']),
-    observacao: obterValorAlias_(row, headers, ['observacao', 'observação', 'obs'])
+    termos_busca: obterValorAlias_(row, headers, ['termos_busca', 'termos busca']),
+    observacao: obterValorAlias_(row, headers, ['observacoes', 'observacao', 'observação', 'obs'])
   };
 
   produto.tem_dados = row.some(function(value) {
@@ -1452,6 +1476,8 @@ function normalizarProdutoAr_(row, headers, rowNumber) {
   });
   produto.ativo = valorAtivoAr_(produto.ativo_raw);
   produto.economia = calcularEconomiaAr_(produto.preco_com_desconto, produto.preco_sem_desconto);
+  produto.grupo = produto.grupo || produto.grupo_com_desconto || produto.grupo_sem_desconto || '';
+  produto.codigo_grupo = produto.codigo_grupo || produto.grupo_com_desconto || produto.grupo_sem_desconto || '';
   produto.alertas = [];
 
   if (!produto.product_id) {
@@ -1475,18 +1501,27 @@ function listarParceirosAr_() {
   return lerAbaComoObjetos_(sheet).map(function(row, index) {
     const id = row.id_parceiro || `parceiro_${index + 2}`;
     const status = row.status || (row.codigo_revendedor ? 'Ativo' : 'Pendente de código');
+    const nomeCompleto = row.nome_completo || row.nome || '';
 
     return {
       id,
-      nome: row.nome || row.nome_completo || '',
+      _row: row._row || '',
+      id_parceiro: id,
+      nome: nomeCompleto,
+      nome_completo: nomeCompleto,
       nome_empresa: row.nome_empresa || '',
+      cnpj_empresa: row.cnpj_empresa || '',
       codigo_revendedor: row.codigo_revendedor || '',
       status,
       remunerado: row.remunerado || '',
+      email_cadastro_certificado: row.email_cadastro_certificado || '',
       whatsapp_pessoal: row.whatsapp_pessoal || '',
       whatsapp_comercial: row.whatsapp_comercial || '',
       email_comercial: row.email_comercial || '',
-      observacao: row.observacao || ''
+      chave_pix: row.chave_pix || '',
+      nome_chave_pix: row.nome_chave_pix || '',
+      observacao: row.observacoes || row.observacao || '',
+      observacoes: row.observacoes || row.observacao || ''
     };
   }).filter(function(parceiro) {
     return parceiro.nome;
@@ -1507,71 +1542,82 @@ function obterParceiroArPorId_(parceiroId) {
   return null;
 }
 
-function obterTemplatesAr_(config, produto) {
-  const fallback = obterTemplatesConfigAr_(config, produto);
+function montarLinkAr_(config, produto, parceiro, tipo) {
+  const contexto = montarContextoLinkAr_(config, produto, parceiro);
+  let template = '';
 
-  return {
-    com_desconto: produto.link_com_desconto || fallback.com_desconto || '',
-    sem_desconto: produto.link_sem_desconto || fallback.sem_desconto || ''
-  };
-}
-
-function obterTemplatesConfigAr_(config, produto) {
-  const templatesLote = parseJsonSeguro_(config.ar_link_templates_json);
-  const chaves = [
-    produto.codigo_grupo,
-    produto.grupo,
-    normalizarChaveAr_(produto.codigo_grupo),
-    normalizarChaveAr_(produto.grupo),
-    'padrao',
-    'padrão',
-    'default'
-  ].filter(Boolean);
-
-  for (let i = 0; i < chaves.length; i++) {
-    const item = templatesLote[chaves[i]];
-
-    if (item) {
-      return {
-        com_desconto: item.com_desconto || item.link_com_desconto || item.desconto || '',
-        sem_desconto: item.sem_desconto || item.link_sem_desconto || item.sem_desconto || ''
-      };
-    }
+  if (tipo === 'com_desconto') {
+    template = produto.template_link_com_desconto
+      || produto.link_com_desconto
+      || config.ar_link_com_desconto_template
+      || '{url_base}?product_id={product_id}&codrev={codigo_revendedor}&grupo={grupo_com_desconto}';
   }
 
-  return {
-    com_desconto: config.ar_link_com_desconto_template || '',
-    sem_desconto: config.ar_link_sem_desconto_template || ''
-  };
+  if (tipo === 'sem_desconto') {
+    template = produto.template_link_sem_desconto
+      || produto.link_sem_desconto
+      || config.ar_link_sem_desconto_template
+      || '{url_base}?product_id={product_id}&codrev={codigo_revendedor}&grupo={grupo_sem_desconto}';
+  }
+
+  return limparUrlAr_(aplicarTemplateAr_(template, contexto));
 }
 
-function obterVariaveisTemplateAr_(produto, parceiro) {
+function montarContextoLinkAr_(config, produto, parceiro) {
+  const urlBase = produto.url_base || config.ar_url_base_padrao || '';
+
   return {
+    url_base: urlBase,
     product_id: produto.product_id,
+    produto_id: produto.product_id,
+    id_produto: produto.product_id,
     codigo_revendedor: parceiro.codigo_revendedor,
-    grupo: produto.grupo,
-    codigo_grupo: produto.codigo_grupo,
-    preco_com_desconto: produto.preco_com_desconto,
-    preco_sem_desconto: produto.preco_sem_desconto,
-    modelo: produto.modelo,
-    validade: produto.validade,
-    ac: produto.ac
+    codrev: parceiro.codigo_revendedor,
+    cod_revendedor: parceiro.codigo_revendedor,
+    grupo_com_desconto: produto.grupo_com_desconto || '',
+    grupo_sem_desconto: produto.grupo_sem_desconto || '',
+    grupo: produto.grupo || '',
+    codigo_grupo: produto.codigo_grupo || '',
+    descricao_comercial: produto.descricao_comercial || '',
+    ac: produto.ac || '',
+    modelo: produto.modelo || '',
+    validade: produto.validade || '',
+    tipo_certificado: produto.tipo_certificado || '',
+    midia: produto.midia || ''
   };
 }
 
-function aplicarTemplateAr_(template, variaveis) {
-  return String(template || '').replace(/\{([a-zA-Z0-9_]+)\}/g, function(match, chave) {
-    return variaveis[chave] == null ? '' : String(variaveis[chave]);
+function aplicarTemplateAr_(template, contexto) {
+  let output = String(template || '');
+
+  Object.keys(contexto).forEach(function(key) {
+    const value = encodeURIComponent(contexto[key] || '');
+    output = output.replace(new RegExp('\\{' + key + '\\}', 'g'), value);
   });
+
+  return output;
+}
+
+function limparUrlAr_(url) {
+  return String(url || '')
+    .replace(/\?&/g, '?')
+    .replace(/&&/g, '&')
+    .replace(/[?&]grupo=$/g, '')
+    .trim();
 }
 
 function salvarHistoricoAr_(usuario, produto, parceiro, linkComDesconto, linkSemDesconto) {
   const sheet = obterPlanilha_().getSheetByName('Historico_Links');
 
   if (!sheet) {
-    return;
+    return null;
   }
 
+  const precoCom = parseMoneyAr_(produto.preco_com_desconto);
+  const precoSem = parseMoneyAr_(produto.preco_sem_desconto);
+  const economia = precoSem - precoCom;
+  const idHistorico = gerarIdAr_('HIS');
+  const agora = new Date();
   const headers = obterHeaders_(sheet);
   const cols = obterMapaColunas_(headers);
   const row = new Array(headers.length).fill('');
@@ -1581,25 +1627,50 @@ function salvarHistoricoAr_(usuario, produto, parceiro, linkComDesconto, linkSem
     }
   };
 
-  set('id_historico', Utilities.getUuid());
-  set('data_geracao', new Date());
+  set('id_historico', idHistorico);
+  set('data_geracao', agora);
+  set('data_hora', agora);
   set('usuario', usuario.email || '');
-  set('parceiro', parceiro.nome || '');
+  set('usuario_email', usuario.email || '');
+  set('parceiro', parceiro.nome_completo || parceiro.nome || '');
+  set('parceiro_id', parceiro.id_parceiro || parceiro.id || '');
   set('codigo_revendedor', parceiro.codigo_revendedor || '');
+  set('status_parceiro', parceiro.status || '');
   set('produto', produto.descricao_comercial || '');
   set('product_id', produto.product_id || '');
   set('ac', produto.ac || '');
+  set('tipo_certificado', produto.tipo_certificado || '');
+  set('midia', produto.midia || '');
   set('modelo', produto.modelo || '');
   set('validade', produto.validade || '');
   set('grupo', produto.codigo_grupo || produto.grupo || '');
   set('link', linkComDesconto || linkSemDesconto || '');
   set('link_com_desconto', linkComDesconto || '');
   set('link_sem_desconto', linkSemDesconto || '');
-  set('preco_com_desconto', produto.preco_com_desconto || '');
-  set('preco_sem_desconto', produto.preco_sem_desconto || '');
+  set('preco_com_desconto', precoCom);
+  set('preco_sem_desconto', precoSem);
+  set('economia', economia);
   set('status', 'gerado');
+  set('origem', 'Painel AR');
+  set('observacoes', '');
 
   sheet.appendRow(row);
+
+  return {
+    id_historico: idHistorico,
+    data_hora: agora,
+    usuario_email: usuario.email || '',
+    produto: produto.descricao_comercial || '',
+    product_id: produto.product_id || '',
+    parceiro: parceiro.nome_completo || parceiro.nome || '',
+    parceiro_id: parceiro.id_parceiro || parceiro.id || '',
+    codigo_revendedor: parceiro.codigo_revendedor || '',
+    link_com_desconto: linkComDesconto || '',
+    link_sem_desconto: linkSemDesconto || '',
+    preco_com_desconto: precoCom,
+    preco_sem_desconto: precoSem,
+    economia
+  };
 }
 
 function listarHistoricoAr_(limite) {
@@ -1616,7 +1687,7 @@ function listarHistoricoAr_(limite) {
   }).slice(0, limite || 10).map(function(row) {
     return {
       data_geracao: formatarDataHora_(row.data_geracao),
-      usuario: row.usuario || '',
+      usuario: row.usuario || row.usuario_email || '',
       parceiro: row.parceiro || '',
       produto: row.produto || '',
       product_id: row.product_id || '',
@@ -1675,6 +1746,11 @@ function calcularEconomiaAr_(comDesconto, semDesconto) {
   return String(Math.max(sem - com, 0).toFixed(2)).replace('.', ',');
 }
 
+function parseMoneyAr_(valor) {
+  const numero = parseNumeroAr_(valor);
+  return numero == null ? 0 : numero;
+}
+
 function parseNumeroAr_(valor) {
   if (valor === '' || valor == null) {
     return null;
@@ -1689,6 +1765,13 @@ function parseNumeroAr_(valor) {
   const numero = Number(texto);
 
   return isNaN(numero) ? null : numero;
+}
+
+function gerarIdAr_(prefixo) {
+  const timestamp = Utilities.formatDate(new Date(), obterTimeZone_(), 'yyyyMMddHHmmss');
+  const random = Math.floor(Math.random() * 9000) + 1000;
+
+  return `${prefixo}-${timestamp}-${random}`;
 }
 
 function parseListaEmails_(valor) {
