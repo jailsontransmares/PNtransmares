@@ -1097,6 +1097,154 @@ body.dark .brand h1 {
   color: var(--cor-destaque);
 }
 
+.ar-mvp {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: minmax(420px, 0.95fr) minmax(360px, 0.7fr);
+}
+
+.ar-mvp-partner,
+.ar-mvp-product {
+  min-width: 0;
+}
+
+.ar-mvp-line {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  min-height: 26px;
+}
+
+.ar-mvp-line label,
+.ar-mvp-fields label span {
+  align-items: center;
+  background: #F3F4F6;
+  border-bottom: 1px dotted #1F2937;
+  color: #111827;
+  display: flex;
+  font-size: 13px;
+  font-weight: 800;
+  justify-content: flex-end;
+  padding: 4px 6px;
+  text-align: right;
+}
+
+.ar-mvp-line-title label {
+  background: #0B3A66;
+  color: white;
+}
+
+.ar-mvp-line div {
+  align-items: center;
+  background: #F9FAFB;
+  border-bottom: 1px dotted #1F2937;
+  color: #111827;
+  display: flex;
+  font-size: 13px;
+  min-width: 0;
+  padding: 3px 5px;
+}
+
+.ar-mvp-input {
+  background: #E5E7EB;
+  border: 0;
+  color: #111827;
+  font: inherit;
+  min-height: 24px;
+  outline: none;
+  padding: 3px 6px;
+  width: 100%;
+}
+
+.ar-mvp-fields {
+  display: grid;
+  gap: 4px;
+}
+
+.ar-mvp-fields label {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  min-height: 24px;
+}
+
+.ar-mvp-options {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 12px;
+  max-height: 170px;
+  overflow: auto;
+}
+
+.ar-mvp .ar-product-option,
+.ar-mvp .ar-partner-option {
+  border-radius: 0;
+  gap: 2px;
+  padding: 6px 8px;
+}
+
+.ar-mvp-band,
+.ar-mvp-price {
+  align-items: center;
+  display: grid;
+  grid-template-columns: 126px minmax(0, 1fr);
+  min-height: 42px;
+}
+
+.ar-mvp-band strong,
+.ar-mvp-price strong {
+  align-items: center;
+  background: #0B3A66;
+  color: white;
+  display: flex;
+  font-size: 14px;
+  font-weight: 900;
+  height: 100%;
+  justify-content: flex-end;
+  padding: 0 8px;
+}
+
+.ar-mvp-band span,
+.ar-mvp-price span {
+  align-items: center;
+  background: #D1D5DB;
+  color: #111827;
+  display: flex;
+  font-size: 12px;
+  font-weight: 700;
+  height: 100%;
+  padding: 0 8px;
+}
+
+.ar-mvp-price.discount strong,
+.ar-mvp-price.discount span {
+  background: #DC0000;
+  color: white;
+}
+
+.ar-mvp-price.full strong,
+.ar-mvp-price.full span {
+  background: #666666;
+  color: white;
+}
+
+.ar-mvp-price.economy strong,
+.ar-mvp-price.economy span {
+  background: #16A34A;
+  color: white;
+}
+
+.ar-mvp-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ar-mvp .ar-budget {
+  margin-top: 12px;
+}
+
+.ar-mvp .ar-result article {
+  border-radius: 0;
+}
+
 .ar-audit-row {
   grid-template-columns: 120px 1fr minmax(140px, 0.7fr) 80px minmax(180px, 1fr);
 }
@@ -1240,6 +1388,11 @@ body.dark .brand h1 {
   .links-toolbar,
   .links-list,
   .ar-generator,
+  .ar-mvp,
+  .ar-mvp-line,
+  .ar-mvp-fields label,
+  .ar-mvp-band,
+  .ar-mvp-price,
   .ar-toolbar,
   .ar-search-grid,
   .ar-budget-values,
