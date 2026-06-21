@@ -96,6 +96,21 @@ body {
   padding: 22px 24px;
 }
 
+.topbar::before {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--cor-principal) 8%, var(--card)), var(--card));
+  border: 1px dashed color-mix(in srgb, var(--cor-principal) 26%, var(--borda));
+  border-radius: 14px;
+  content: "";
+  flex: 0 0 156px;
+  height: 56px;
+}
+
+.brand {
+  flex: 1;
+  min-width: 0;
+}
+
 .brand h1 {
   margin: 0;
   font-size: 26px;
@@ -273,7 +288,7 @@ body.dark .brand h1 {
 
 .module-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-lg);
 }
 
@@ -281,7 +296,7 @@ body.dark .brand h1 {
   cursor: pointer;
   display: grid;
   gap: var(--space-md);
-  min-height: 150px;
+  min-height: 104px;
   position: relative;
   transition: transform var(--transition-default), border-color var(--transition-default), box-shadow var(--transition-default);
 }
@@ -299,24 +314,11 @@ body.dark .brand h1 {
   display: flex;
   justify-content: space-between;
   gap: var(--space-md);
+  height: 100%;
 }
 
-.module-card-icon {
-  align-items: center;
-  background: color-mix(in srgb, var(--cor-principal) 12%, var(--card));
-  border: 1px solid color-mix(in srgb, var(--cor-principal) 16%, var(--borda));
-  border-radius: var(--radius-button-secondary);
-  color: var(--cor-principal);
-  display: inline-flex;
-  height: 42px;
-  justify-content: center;
-  width: 42px;
-}
-
-.module-card-icon svg {
-  display: block;
-  height: 22px;
-  width: 22px;
+.module-card h3 {
+  margin: 0;
 }
 
 .module-card-arrow {
@@ -1789,6 +1791,11 @@ body.dark .brand h1 {
     align-items: flex-start;
   }
 
+  .topbar::before {
+    flex-basis: auto;
+    width: 170px;
+  }
+
   .user-box {
     text-align: left;
     width: 100%;
@@ -1807,8 +1814,12 @@ body.dark .brand h1 {
     width: 100%;
   }
 
+  .module-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .module-card {
-    min-height: 136px;
+    min-height: 96px;
   }
 
   .admin-shell,
@@ -1870,6 +1881,12 @@ body.dark .brand h1 {
 
   .module-tabs {
     width: 100%;
+  }
+}
+
+@media (max-width: 460px) {
+  .module-grid {
+    grid-template-columns: 1fr;
   }
 }
 /* ===== Painel AR — MVP integrado ===== */
