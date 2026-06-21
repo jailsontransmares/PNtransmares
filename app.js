@@ -1705,8 +1705,8 @@ function renderGeradorLinksAr() {
   `;
 }
 function renderAcaoGerarLinksAr() {
-  const produto = produtoSelecionadoAr();
-  const parceiro = parceiroSelecionadoAr();
+  const produto = obterProdutoSelecionadoAr();
+  const parceiro = obterParceiroSelecionadoAr();
   const podeGerar = produto && parceiro && !state.ar.gerando;
 
   return `
@@ -1729,7 +1729,7 @@ function renderAcaoGerarLinksAr() {
 }
 
 function renderPainelParceiroMvpAr() {
-  const parceiro = parceiroSelecionadoAr();
+  const parceiro = obterParceiroSelecionadoAr();
 
   return `
     <div class="ar-mvp-card ar-partner-search-card">
@@ -1877,7 +1877,7 @@ function renderParceiroSelecionadoAr(parceiro) {
 }
 
 function renderPainelProdutoMvpAr() {
-  const produto = produtoSelecionadoAr();
+  const produto = obterProdutoSelecionadoAr();
 
   return `
     <div class="ar-mvp-card ar-product-card">
@@ -1964,6 +1964,35 @@ function atualizarSugestoesProdutoUnicoDomAr() {
     box.innerHTML = '';
     return;
   }
+
+  box.hidden = false;
+  box.innerHTML = produtos.map(produto => {
+    const economia = formatarEconomiaProdutoAr(produto);
+
+    return `
+      <button type="button" onclick="selecionarProdutoCompletoAr('${escapeAttr(produto.id)}')">
+        <strong>${escapeHtml(produto.descricao_comercial || produto.produto || 'Certificado digital')}</strong>
+
+        <span>
+          ${escapeHtml(produto.modelo || 'Modelo não informado')}
+          ${produto.validade ? ` · <b class="ar-validity-pill">Validade: ${escapeHtml(produto.validade)}</b>` : ''}
+        </span>
+
+        <small>
+          ${produto.ac ? `AC: ${escapeHtml(produto.ac)}` : ''}
+          ${produto.midia ? ` · Mídia: ${escapeHtml(produto.midia)}` : ''}
+        </small>
+
+        <small>
+          ${produto.preco_com_desconto ? `Com desconto: ${escapeHtml(formatarMoedaProdutoAr(produto.preco_com_desconto))}` : ''}
+          ${produto.preco_sem_desconto ? ` · Sem desconto: ${escapeHtml(formatarMoedaProdutoAr(produto.preco_sem_desconto))}` : ''}
+          ${economia ? ` · Economia: ${escapeHtml(economia)}` : ''}
+        </small>
+      </button>
+    `;
+  }).join('');
+}
+
 function produtosFiltradosBuscaUnicaAr() {
   const busca = normalizarBuscaAr(state.ar.produtoBusca || '');
 
@@ -2010,33 +2039,6 @@ function selecionarProdutoCompletoAr(id) {
   state.ar.alertas = [];
 
   renderPainelAr();
-}
-  box.hidden = false;
-  box.innerHTML = produtos.map(produto => {
-    const economia = formatarEconomiaProdutoAr(produto);
-
-    return `
-      <button type="button" onclick="selecionarProdutoCompletoAr('${escapeAttr(produto.id)}')">
-        <strong>${escapeHtml(produto.descricao_comercial || produto.produto || 'Certificado digital')}</strong>
-
-        <span>
-          ${escapeHtml(produto.modelo || 'Modelo não informado')}
-          ${produto.validade ? ` · <b class="ar-validity-pill">Validade: ${escapeHtml(produto.validade)}</b>` : ''}
-        </span>
-
-        <small>
-          ${produto.ac ? `AC: ${escapeHtml(produto.ac)}` : ''}
-          ${produto.midia ? ` · Mídia: ${escapeHtml(produto.midia)}` : ''}
-        </small>
-
-        <small>
-          ${produto.preco_com_desconto ? `Com desconto: ${escapeHtml(formatarMoedaProdutoAr(produto.preco_com_desconto))}` : ''}
-          ${produto.preco_sem_desconto ? ` · Sem desconto: ${escapeHtml(formatarMoedaProdutoAr(produto.preco_sem_desconto))}` : ''}
-          ${economia ? ` · Economia: ${escapeHtml(economia)}` : ''}
-        </small>
-      </button>
-    `;
-  }).join('');
 }
 
 
@@ -2394,7 +2396,7 @@ function renderDetalhesParceiroAr(parceiro) {
 }
 
 function renderOrcamentoAr() {
-  const produto = produtoSelecionadoAr();
+  const produto = obterProdutoSelecionadoAr();
 
   if (!produto) {
     return `
