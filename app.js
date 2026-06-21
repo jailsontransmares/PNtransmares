@@ -7,7 +7,7 @@ const state = {
   favoritos: [],
   meta: null,
   admin: {
-    aba: 'configuracoes',
+    aba: 'identidade',
     config: [],
     categorias: [],
     grupos: [],
@@ -146,8 +146,8 @@ function renderErro(mensagem) {
 function aplicarConfigVisual() {
   if (!state.config) return;
 
-  document.documentElement.style.setProperty('--cor-principal', state.config.cor_principal || '#0B3A66');
-  document.documentElement.style.setProperty('--cor-secundaria', state.config.cor_secundaria || '#123C69');
+  document.documentElement.style.setProperty('--cor-principal', state.config.cor_principal || '#294895');
+  document.documentElement.style.setProperty('--cor-secundaria', state.config.cor_secundaria || '#1F3676');
   document.documentElement.style.setProperty('--cor-destaque', state.config.cor_destaque || '#16A34A');
 
   document.title = state.config.nome_sistema || 'PAINEL TRANSMARES';
@@ -385,14 +385,35 @@ function renderAdministracao() {
 
       <section class="admin-shell">
         <div class="admin-tabs">
-          <button class="admin-tab ${state.admin.aba === 'configuracoes' ? 'active' : ''}" type="button" onclick="selecionarAbaAdmin('configuracoes')">Configurações</button>
-          <button class="admin-tab ${state.admin.aba === 'categorias' ? 'active' : ''}" type="button" onclick="selecionarAbaAdmin('categorias')">Categorias</button>
-          <button class="admin-tab ${state.admin.aba === 'grupos' ? 'active' : ''}" type="button" onclick="selecionarAbaAdmin('grupos')">Grupos</button>
+          <span class="admin-nav-label">Configurações</span>
+          ${renderAdminTab('identidade', 'Identidade do Painel')}
+          ${renderAdminTab('aparencia', 'Aparência')}
+          ${renderAdminTab('logo', 'Logo e Marca')}
+          ${renderAdminTab('limites', 'Limites do Painel')}
+
+          <span class="admin-nav-label">Cadastros</span>
+          ${renderAdminTab('categorias', 'Categorias')}
+          ${renderAdminTab('grupos', 'Grupos')}
+
+          <span class="admin-nav-label">Estrutura futura</span>
+          ${renderAdminTab('home-exibicao', 'Home e Exibição')}
+          ${renderAdminTab('modulos', 'Configurações por Módulo')}
+          ${renderAdminTab('usuarios', 'Usuários')}
+          ${renderAdminTab('perfis', 'Perfis de Acesso')}
+          ${renderAdminTab('permissoes', 'Permissões por Módulo')}
         </div>
 
         ${renderAdminPanel()}
       </section>
     </main>
+  `;
+}
+
+function renderAdminTab(aba, label) {
+  return `
+    <button class="admin-tab ${state.admin.aba === aba ? 'active' : ''}" type="button" onclick="selecionarAbaAdmin('${escapeAttr(aba)}')">
+      ${escapeHtml(label)}
+    </button>
   `;
 }
 
@@ -405,19 +426,78 @@ function renderAdminPanel() {
     return renderCrudAdmin('grupos', 'Grupos', 'Organize permissões e agrupamentos para fases futuras.');
   }
 
+  if (state.admin.aba === 'home-exibicao') {
+    return renderHomeExibicaoAdmin();
+  }
+
+  if (state.admin.aba === 'modulos') {
+    return renderModulosAdmin();
+  }
+
+  if (state.admin.aba === 'usuarios') {
+    return renderAdminPreparado('Usuários', 'A planilha de usuários já existe e é usada para autenticação, mas ainda não há endpoint administrativo para cadastro e edição nesta tela.', [
+      'Evita simular gestão de usuários sem persistência própria.',
+      'Próximo passo técnico: criar API segura para listar, criar, editar e inativar usuários.',
+      'A autenticação atual continua preservada pelo backend.'
+    ]);
+  }
+
+  if (state.admin.aba === 'perfis') {
+    return renderAdminPreparado('Perfis de Acesso', 'Os perfis atuais são lidos diretamente do usuário, mas ainda não existe cadastro dedicado de perfis.', [
+      'Hoje o perfil gestor controla acesso ao Admin e a cards específicos.',
+      'Próximo passo técnico: definir tabela ou configuração persistida de perfis.',
+      'Sem backend próprio, esta área fica apenas preparada visualmente.'
+    ]);
+  }
+
+  if (state.admin.aba === 'permissoes') {
+    return renderAdminPreparado('Permissões por Módulo', 'As permissões por módulo ainda não possuem tabela, endpoint ou regra de enforcement configurável.', [
+      'Não serão exibidos controles falsos de segurança.',
+      'Os cards atuais continuam sendo definidos pelo backend conforme o perfil.',
+      'Próximo passo técnico: criar modelo de permissões e aplicar as regras nos endpoints.'
+    ]);
+  }
+
+  const gruposPorAba = {
+    configuracoes: 'identidade',
+    identidade: 'identidade',
+    aparencia: 'visual',
+    logo: 'logo',
+    limites: 'limites'
+  };
+  const grupoId = gruposPorAba[state.admin.aba] || 'identidade';
+  const titulos = {
+    identidade: {
+      titulo: 'Identidade do Painel',
+      subtitulo: 'Nome e subtítulo exibidos no cabeçalho global do sistema.'
+    },
+    visual: {
+      titulo: 'Aparência',
+      subtitulo: 'Cores operacionais e preferência visual padrão.'
+    },
+    logo: {
+      titulo: 'Logo e Marca',
+      subtitulo: 'Campos existentes para preparar a identidade visual do painel.'
+    },
+    limites: {
+      titulo: 'Limites do Painel',
+      subtitulo: 'Parâmetros que controlam quantidades exibidas na Home e no histórico.'
+    }
+  };
+
   return `
     <section class="admin-panel">
       <div class="admin-panel-header">
         <div>
-          <h2>Configurações do Sistema</h2>
-          <p>Edite uma configuração por vez.</p>
+          <h2>${escapeHtml(titulos[grupoId].titulo)}</h2>
+          <p>${escapeHtml(titulos[grupoId].subtitulo)} Edite uma configuração por vez.</p>
         </div>
 
-        <button class="secondary-btn" type="button" onclick="restaurarCoresPadrao()">Restaurar cores padrão</button>
+        ${grupoId === 'visual' ? '<button class="secondary-btn" type="button" onclick="restaurarCoresPadrao()">Restaurar cores padrão</button>' : ''}
       </div>
 
       ${state.admin.message ? `<p class="admin-message">${escapeHtml(state.admin.message)}</p>` : ''}
-      ${state.admin.loading ? '<p class="quick-link-empty">Carregando configurações...</p>' : renderConfigAdmin()}
+      ${state.admin.loading ? '<p class="quick-link-empty">Carregando configurações...</p>' : renderConfigAdmin(grupoId)}
     </section>
   `;
 }
@@ -434,12 +514,12 @@ async function selecionarAbaAdmin(aba) {
   renderAdministracao();
 }
 
-function renderConfigAdmin() {
+function renderConfigAdmin(grupoAtivo) {
   if (!state.admin.config.length) {
     return '<p class="quick-link-empty">Nenhuma configuração encontrada.</p>';
   }
 
-  const grupos = agruparConfiguracoes(state.admin.config);
+  const grupos = agruparConfiguracoes(state.admin.config).filter(grupo => !grupoAtivo || grupo.id === grupoAtivo);
 
   return `
     <div class="config-groups">
@@ -486,12 +566,12 @@ function agruparConfiguracoes(configs) {
     },
     {
       id: 'visual',
-      titulo: 'Visual',
+      titulo: 'Aparência',
       chaves: ['cor_principal', 'cor_secundaria', 'cor_destaque', 'modo_visual_padrao']
     },
     {
       id: 'logo',
-      titulo: 'Logo e Arquivos',
+      titulo: 'Logo e Marca',
       chaves: ['exibir_logo', 'logo_file_id', 'logo_url', 'drive_folder_name', 'drive_folder_id']
     },
     {
@@ -514,6 +594,103 @@ function agruparConfiguracoes(configs) {
     ...grupo,
     itens: grupo.chaves.map(chave => porChave[chave]).filter(Boolean)
   })).filter(grupo => grupo.itens.length);
+}
+
+function renderHomeExibicaoAdmin() {
+  const cards = state.cards || [];
+
+  return `
+    <section class="admin-panel">
+      <div class="admin-panel-header">
+        <div>
+          <h2>Home e Exibição</h2>
+          <p>Visão preparada para futuras regras de organização da Home. Os controles atuais continuam em Limites do Painel.</p>
+        </div>
+      </div>
+
+      ${state.admin.message ? `<p class="admin-message">${escapeHtml(state.admin.message)}</p>` : ''}
+
+      <div class="admin-preview-grid">
+        ${renderAdminPreviewCard('Módulos visíveis hoje', `${cards.length} cards`, 'A lista atual vem do backend conforme o perfil do usuário.')}
+        ${renderAdminPreviewCard('Links rápidos', `${state.config?.limite_favoritos || 5} favoritos`, 'Limite funcional configurável em Limites do Painel.')}
+        ${renderAdminPreviewCard('Avisos internos', `${state.config?.limite_avisos || 3} avisos`, 'Limite funcional configurável em Limites do Painel.')}
+        ${renderAdminPreviewCard('Aniversariantes', `${state.config?.limite_aniversariantes || 25} registros`, 'Limite funcional configurável em Limites do Painel.')}
+      </div>
+
+      <div class="admin-prepared-box">
+        <strong>Preparado para evolução</strong>
+        <p>Esta área pode receber, em fase futura, ordenação de cards, visibilidade por perfil e preferências de exibição. Ainda não há backend para salvar essas regras.</p>
+      </div>
+    </section>
+  `;
+}
+
+function renderModulosAdmin() {
+  return `
+    <section class="admin-panel">
+      <div class="admin-panel-header">
+        <div>
+          <h2>Configurações por Módulo</h2>
+          <p>Organização visual para módulos reais. Apenas as configurações já existentes são editáveis.</p>
+        </div>
+      </div>
+
+      ${state.admin.message ? `<p class="admin-message">${escapeHtml(state.admin.message)}</p>` : ''}
+
+      <div class="admin-module-summary">
+        ${renderAdminModuleCard('Links Úteis', 'Disponível na Home conforme perfil.', 'Atual')}
+        ${renderAdminModuleCard('Central de Senhas', 'Fluxo preservado; sem novas configurações nesta fase.', 'Atual')}
+        ${renderAdminModuleCard('Painel AR', 'Configurações técnicas existentes abaixo.', 'Atual')}
+        ${renderAdminModuleCard('Administração', 'Disponível apenas para gestor.', 'Atual')}
+      </div>
+
+      ${state.admin.loading ? '<p class="quick-link-empty">Carregando configurações...</p>' : renderConfigAdmin('painel_ar')}
+    </section>
+  `;
+}
+
+function renderAdminPreviewCard(titulo, valor, descricao) {
+  return `
+    <article class="admin-preview-card">
+      <span>${escapeHtml(titulo)}</span>
+      <strong>${escapeHtml(valor)}</strong>
+      <p>${escapeHtml(descricao)}</p>
+    </article>
+  `;
+}
+
+function renderAdminModuleCard(titulo, descricao, status) {
+  return `
+    <article class="admin-module-card">
+      <div>
+        <strong>${escapeHtml(titulo)}</strong>
+        <p>${escapeHtml(descricao)}</p>
+      </div>
+      <span>${escapeHtml(status)}</span>
+    </article>
+  `;
+}
+
+function renderAdminPreparado(titulo, descricao, itens) {
+  return `
+    <section class="admin-panel">
+      <div class="admin-panel-header">
+        <div>
+          <h2>${escapeHtml(titulo)}</h2>
+          <p>${escapeHtml(descricao)}</p>
+        </div>
+      </div>
+
+      <div class="admin-prepared-box">
+        <strong>Área visual preparada</strong>
+        <p>Esta seção foi incluída para validar a navegação futura sem criar botões ou salvamentos que ainda não existem no backend.</p>
+      </div>
+
+      <div class="admin-prepared-list">
+        ${itens.map(item => `<article>${escapeHtml(item)}</article>`).join('')}
+      </div>
+    </section>
+  `;
 }
 
 function obterRotuloConfig(chave) {
@@ -1582,7 +1759,7 @@ async function abrirPainelAr() {
   state.ar.message = '';
   state.ar.resultado = null;
   state.ar.alertas = [];
-  state.ar.aba = 'gerar';
+  state.ar.aba = 'inicio';
   await carregarPainelAr();
 }
 
@@ -1637,6 +1814,7 @@ function renderPainelAr() {
             <p>Consulte produtos, selecione o parceiro e gere links comerciais.</p>
           </div>
           <div class="module-tabs" role="group" aria-label="Visualização do Painel AR">
+            <button class="${state.ar.aba === 'inicio' ? 'active' : ''}" type="button" onclick="selecionarAbaAr('inicio')">Início</button>
             <button class="${state.ar.aba === 'gerar' ? 'active' : ''}" type="button" onclick="selecionarAbaAr('gerar')">Gerar links</button>
             <button class="${state.ar.aba === 'produtos' ? 'active' : ''}" type="button" onclick="selecionarAbaAr('produtos')">Lista produtos</button>
             ${gestor ? `<button class="${state.ar.aba === 'historico' ? 'active' : ''}" type="button" onclick="selecionarAbaAr('historico')">Histórico</button>` : ''}
@@ -1651,6 +1829,10 @@ function renderPainelAr() {
 }
 
 function renderConteudoAr(gestor) {
+  if (state.ar.aba === 'inicio') {
+    return renderInicioPainelAr(gestor);
+  }
+
   if (state.ar.aba === 'historico' && gestor) {
     return renderHistoricoAr();
   }
@@ -1660,6 +1842,61 @@ function renderConteudoAr(gestor) {
   }
 
   return renderGeradorLinksAr();
+}
+
+function renderInicioPainelAr(gestor) {
+  const produtos = state.ar.produtos.length;
+  const parceiros = state.ar.parceiros.length;
+  const historico = state.ar.historico.length;
+
+  return `
+    <section class="ar-home-shell">
+      <div class="ar-home-hero">
+        <div>
+          <span class="ar-eyebrow">Painel AR</span>
+          <h2>Operação de links AR</h2>
+          <p>Acesse os fluxos reais disponíveis hoje para geração, consulta e acompanhamento.</p>
+        </div>
+
+        <div class="ar-home-stats">
+          <span>${produtos} produtos</span>
+          <span>${parceiros} parceiros</span>
+          ${gestor ? `<span>${historico} registros</span>` : ''}
+        </div>
+      </div>
+
+      <div class="ar-home-grid">
+        ${renderArHomeCard('gerar', 'Gerar links', 'Selecionar produto e parceiro para gerar links comerciais.', 'Fluxo principal')}
+        ${renderArHomeCard('produtos', 'Lista produtos', 'Consultar produtos importados, preços, modelos e validades.', `${produtos} itens`)}
+        ${gestor ? renderArHomeCard('historico', 'Histórico', 'Acompanhar links gerados e usuários responsáveis.', `${historico} registros`) : ''}
+      </div>
+
+      <div class="admin-prepared-box ar-home-note">
+        <strong>Submódulos preservados</strong>
+        <p>Esta tela inicial apenas organiza os acessos existentes. Nenhum fluxo atual foi removido ou substituído por funcionalidade incompleta.</p>
+      </div>
+    </section>
+  `;
+}
+
+function renderArHomeCard(aba, titulo, descricao, meta) {
+  return `
+    <article class="ar-home-card" role="button" tabindex="0" onclick="selecionarAbaAr('${escapeAttr(aba)}')" onkeydown="acionarCardAr(event, '${escapeAttr(aba)}')">
+      <div>
+        <span>${escapeHtml(meta)}</span>
+        <h3>${escapeHtml(titulo)}</h3>
+        <p>${escapeHtml(descricao)}</p>
+      </div>
+      <strong aria-hidden="true">›</strong>
+    </article>
+  `;
+}
+
+function acionarCardAr(event, aba) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    selecionarAbaAr(aba);
+  }
 }
 
 function renderGeradorLinksAr() {
