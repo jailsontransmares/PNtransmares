@@ -1307,6 +1307,7 @@ body.dark .brand h1 {
 }
 
 .ar-autocomplete-wrap > div {
+  display: block;
   position: relative;
 }
 
@@ -1340,6 +1341,10 @@ body.dark .brand h1 {
   z-index: 30;
 }
 
+.ar-suggestions[hidden] {
+  display: none;
+}
+
 .ar-suggestions button {
   background: #F8FAFC;
   border: 1px solid transparent;
@@ -1366,6 +1371,100 @@ body.dark .brand h1 {
   color: #64748B;
   font-size: 12px;
   margin: 0;
+}
+
+.ar-partner-card {
+  background: linear-gradient(135deg, #F8FAFC 0%, #FFFFFF 58%, #EEF6FF 100%);
+  border: 1px solid #D7E0EA;
+  border-radius: 12px;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 14px;
+}
+
+.ar-partner-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.ar-partner-head div,
+.ar-partner-code,
+.ar-partner-grid div {
+  display: grid;
+  gap: 3px;
+}
+
+.ar-partner-head span,
+.ar-partner-code span,
+.ar-partner-grid span {
+  color: #64748B;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.ar-partner-head strong {
+  color: #0F172A;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.ar-partner-head em {
+  background: #E5E7EB;
+  border-radius: 999px;
+  color: #475569;
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+  padding: 5px 9px;
+}
+
+.ar-partner-head em.is-active {
+  background: #DCFCE7;
+  color: #15803D;
+}
+
+.ar-partner-code {
+  background: #0B3A66;
+  border-radius: 10px;
+  color: white;
+  padding: 10px 12px;
+}
+
+.ar-partner-code span {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.ar-partner-code strong {
+  color: white;
+  font-size: 18px;
+}
+
+.ar-partner-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ar-partner-grid div {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid #E2E8F0;
+  border-radius: 9px;
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+.ar-partner-grid strong {
+  color: #172033;
+  font-size: 13px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .ar-mvp-band,
