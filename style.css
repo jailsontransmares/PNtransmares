@@ -1245,6 +1245,118 @@ body.dark .brand h1 {
   border-radius: 0;
 }
 
+.ar-mvp {
+  background: linear-gradient(180deg, #F8FAFC 0%, #EEF2F7 100%);
+  border: 1px solid #D8E0EA;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.ar-mvp-partner,
+.ar-mvp-product {
+  background: white;
+  border: 1px solid #DDE5EF;
+  border-radius: 10px;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+  padding: 12px;
+}
+
+.ar-mvp-card-title {
+  color: #0B3A66;
+  font-size: 15px;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+
+.ar-mvp-line,
+.ar-mvp-fields label {
+  border: 1px solid #D7E0EA;
+  border-radius: 8px;
+  margin-bottom: 7px;
+  overflow: hidden;
+}
+
+.ar-mvp-line label,
+.ar-mvp-fields label span {
+  background: #0B3A66;
+  border: 0;
+  color: white;
+  font-size: 12px;
+  min-height: 34px;
+}
+
+.ar-mvp-line div {
+  background: #F8FAFC;
+  border: 0;
+  min-height: 34px;
+}
+
+.ar-mvp-input {
+  background: #F8FAFC;
+  min-height: 34px;
+}
+
+.ar-mvp-input:focus {
+  background: white;
+  box-shadow: inset 0 0 0 2px rgba(11, 58, 102, 0.14);
+}
+
+.ar-mvp-band,
+.ar-mvp-price {
+  border-radius: 8px;
+  margin-top: 9px;
+  overflow: hidden;
+}
+
+.ar-mvp-band strong,
+.ar-mvp-price strong {
+  background: #0B3A66;
+  font-size: 13px;
+}
+
+.ar-mvp-band span,
+.ar-mvp-price span {
+  background: #E5E7EB;
+  font-size: 13px;
+}
+
+.ar-mvp-price.discount strong,
+.ar-mvp-price.discount span {
+  background: #DC2626;
+}
+
+.ar-mvp-price.full strong,
+.ar-mvp-price.full span {
+  background: #4B5563;
+}
+
+.ar-mvp-price.economy strong,
+.ar-mvp-price.economy span {
+  background: #16A34A;
+}
+
+.ar-mvp-actions {
+  margin-top: 10px;
+}
+
+.ar-mvp .ar-budget > .link-sub-btn,
+.ar-mvp-actions .save-btn {
+  min-height: 34px;
+}
+
+.ar-mvp .ar-result {
+  background: #F8FAFC;
+  border: 1px solid #DDE5EF;
+  border-radius: 10px;
+  margin-top: 12px;
+  padding: 10px;
+}
+
+.ar-mvp .ar-result article {
+  background: white;
+  border-radius: 8px;
+}
+
 .ar-audit-row {
   grid-template-columns: 120px 1fr minmax(140px, 0.7fr) 80px minmax(180px, 1fr);
 }
