@@ -67,6 +67,20 @@ const state = {
     loading: false,
     message: ''
   },
+  ar: {
+    produtos: [],
+    parceiros: [],
+    historico: [],
+    busca: '',
+    produtoId: '',
+    parceiroId: '',
+    resultado: null,
+    alertas: [],
+    aba: 'gerar',
+    loading: false,
+    gerando: false,
+    message: ''
+  },
   temaAtual: 'claro'
 };
 
@@ -280,6 +294,11 @@ function abrirModulo(id) {
 
   if (id === 'central-senhas') {
     abrirCentralSenhas();
+    return;
+  }
+
+  if (id === 'painel-ar') {
+    abrirPainelAr();
     return;
   }
 
@@ -1512,6 +1531,347 @@ function validarSenhaPayload(payload) {
   return erros;
 }
 
+async function abrirPainelAr() {
+  state.ar.message = '';
+  state.ar.resultado = null;
+  state.ar.alertas = [];
+  state.ar.aba = 'gerar';
+  await carregarPainelAr();
+}
+
+async function carregarPainelAr() {
+  state.ar.loading = true;
+  renderPainelAr();
+
+  try {
+    const response = await chamarApi('getArData');
+
+    if (!response.ok) {
+      throw new Error(obterMensagemApi(response, 'Não foi possível carregar o Painel AR.'));
+    }
+
+    state.ar.produtos = response.data.produtos || [];
+    state.ar.parceiros = response.data.parceiros || [];
+    state.ar.historico = response.data.historico || [];
+    state.ar.loading = false;
+    renderPainelAr();
+  } catch (erro) {
+    state.ar.loading = false;
+    state.ar.message = erro.message || 'Erro ao carregar o Painel AR.';
+    renderPainelAr();
+  }
+}
+
+function renderPainelAr() {
+  const gestor = state.usuario?.perfil === 'gestor';
+  const nomeSistema = state.config?.nome_sistema || 'PAINEL TRANSMARES';
+  const subtitulo = state.config?.subtitulo_sistema || 'Central operacional da Transmares Corretora de Seguros';
+
+  document.getElementById('app').innerHTML = `
+    <main class="dashboard">
+      <header class="topbar">
+        <div class="brand">
+          <h1>${escapeHtml(nomeSistema)}</h1>
+          <p>${escapeHtml(subtitulo)}</p>
+        </div>
+
+        <div class="user-box">
+          <strong>${escapeHtml(state.usuario.nome || '')}</strong><br>
+          ${escapeHtml(state.usuario.email || '')}<br>
+          <button class="secondary-btn" type="button" onclick="renderDashboard()">Voltar</button>
+        </div>
+      </header>
+
+      <section class="admin-panel">
+        <div class="admin-panel-header">
+          <div>
+            <h2>Painel AR Transmares</h2>
+            <p>Consulte produtos, selecione o parceiro e gere links comerciais.</p>
+          </div>
+          ${gestor ? `
+            <div class="module-tabs" role="group" aria-label="Visualização do Painel AR">
+              <button class="${state.ar.aba === 'gerar' ? 'active' : ''}" type="button" onclick="selecionarAbaAr('gerar')">Gerar links</button>
+              <button class="${state.ar.aba === 'historico' ? 'active' : ''}" type="button" onclick="selecionarAbaAr('historico')">Histórico</button>
+            </div>
+          ` : ''}
+        </div>
+
+        ${state.ar.message ? `<p class="admin-message">${escapeHtml(state.ar.message)}</p>` : ''}
+        ${state.ar.loading ? '<p class="quick-link-empty">Carregando produtos e parceiros...</p>' : renderConteudoAr(gestor)}
+      </section>
+    </main>
+  `;
+}
+
+function renderConteudoAr(gestor) {
+  if (state.ar.aba === 'historico' && gestor) {
+    return renderHistoricoAr();
+  }
+
+  return `
+    <div class="ar-layout">
+      <section class="ar-products">
+        <div class="ar-toolbar">
+          <input class="config-input" type="search" value="${escapeAttr(state.ar.busca)}" placeholder="Digite o nome do produto que deseja" oninput="alterarBuscaAr(this.value)">
+          <span>${produtosFiltradosAr().length} produto(s)</span>
+        </div>
+        ${renderTabelaProdutosAr()}
+      </section>
+
+      <aside class="ar-side">
+        <label>
+          <span>Parceiro</span>
+          <select class="config-input" onchange="selecionarParceiroAr(this.value)">
+            <option value="">Selecione o parceiro</option>
+            ${state.ar.parceiros.map(parceiro => `<option value="${escapeAttr(parceiro.id)}" ${state.ar.parceiroId === parceiro.id ? 'selected' : ''}>${escapeHtml(parceiro.nome)}${parceiro.codigo_revendedor ? ` - ${escapeHtml(parceiro.codigo_revendedor)}` : ''}</option>`).join('')}
+          </select>
+        </label>
+        ${renderResumoSelecaoAr()}
+        <button id="ar_gerar_btn" class="save-btn saving-btn ${state.ar.gerando ? 'is-saving' : ''}" type="button" onclick="gerarLinksAr()" ${state.ar.gerando ? 'disabled' : ''}>${state.ar.gerando ? 'Gerando...' : 'Gerar links'}</button>
+        ${renderResultadoAr()}
+      </aside>
+    </div>
+  `;
+}
+
+function produtosFiltradosAr() {
+  const termos = normalizarBuscaAr(state.ar.busca).split(' ').filter(Boolean);
+
+  if (!termos.length) {
+    return state.ar.produtos;
+  }
+
+  return state.ar.produtos.filter(produto => {
+    const texto = normalizarBuscaAr([
+      produto.descricao_comercial,
+      produto.product_id,
+      produto.ac,
+      produto.tipo_certificado,
+      produto.midia,
+      produto.modelo,
+      produto.validade,
+      produto.grupo,
+      produto.codigo_grupo
+    ].join(' '));
+
+    return termos.every(termo => texto.indexOf(termo) >= 0);
+  });
+}
+
+function renderTabelaProdutosAr() {
+  const produtos = produtosFiltradosAr();
+
+  if (!produtos.length) {
+    return '<p class="quick-link-empty">Nenhum produto encontrado.</p>';
+  }
+
+  return `
+    <div class="ar-table">
+      <div class="ar-table-head">
+        <span>Produto</span>
+        <span>AC</span>
+        <span>Modelo</span>
+        <span>Validade</span>
+        <span>Grupo</span>
+        <span>Com desc.</span>
+        <span>Sem desc.</span>
+        <span>Economia</span>
+        <span></span>
+      </div>
+      ${produtos.map(produto => `
+        <article class="ar-row ${state.ar.produtoId === produto.id ? 'selected' : ''} ${produto.alertas.length ? 'has-alert' : ''}">
+          <div>
+            <strong>${escapeHtml(produto.descricao_comercial || 'Produto')}</strong>
+            <small>${escapeHtml(produto.product_id || 'Sem Product ID')}</small>
+            ${produto.alertas.length ? `<em>${escapeHtml(produto.alertas.join(' '))}</em>` : ''}
+          </div>
+          <span>${escapeHtml(produto.ac || '-')}</span>
+          <span>${escapeHtml(produto.modelo || '-')}</span>
+          <span>${escapeHtml(produto.validade || '-')}</span>
+          <span>${escapeHtml(produto.codigo_grupo || produto.grupo || '-')}</span>
+          <span>${escapeHtml(produto.preco_com_desconto || 'Não disponível')}</span>
+          <span>${escapeHtml(produto.preco_sem_desconto || 'Não disponível')}</span>
+          <span>${escapeHtml(produto.economia || '-')}</span>
+          <button class="link-sub-btn" type="button" onclick="selecionarProdutoAr('${escapeAttr(produto.id)}')">${state.ar.produtoId === produto.id ? 'Selecionado' : 'Selecionar'}</button>
+        </article>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderResumoSelecaoAr() {
+  const produto = obterProdutoSelecionadoAr();
+  const parceiro = obterParceiroSelecionadoAr();
+
+  return `
+    <div class="ar-selection">
+      <div>
+        <span>Produto</span>
+        <strong>${escapeHtml(produto?.descricao_comercial || 'Nenhum produto selecionado')}</strong>
+      </div>
+      <div>
+        <span>Parceiro</span>
+        <strong>${escapeHtml(parceiro?.nome || 'Nenhum parceiro selecionado')}</strong>
+        ${parceiro ? `<small>${escapeHtml(parceiro.status || '-')}${parceiro.codigo_revendedor ? ` | ${escapeHtml(parceiro.codigo_revendedor)}` : ' | sem código'}</small>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function renderResultadoAr() {
+  if (!state.ar.resultado) {
+    return '';
+  }
+
+  return `
+    <div class="ar-result">
+      ${state.ar.alertas.length ? `<p class="field-error">${escapeHtml(state.ar.alertas.join(' '))}</p>` : ''}
+      <article>
+        <span>Link com desconto</span>
+        <button id="ar_copy_com" class="link-sub-btn" type="button" onclick="copiarTextoAr('ar_copy_com', '${escapeAttr(state.ar.resultado.links.com_desconto)}', 'Copiar link com desconto')">Copiar link com desconto</button>
+      </article>
+      <article>
+        <span>Link sem desconto</span>
+        <button id="ar_copy_sem" class="link-sub-btn" type="button" onclick="copiarTextoAr('ar_copy_sem', '${escapeAttr(state.ar.resultado.links.sem_desconto)}', 'Copiar link sem desconto')">Copiar link sem desconto</button>
+      </article>
+    </div>
+  `;
+}
+
+function renderHistoricoAr() {
+  if (!state.ar.historico.length) {
+    return '<p class="quick-link-empty">Nenhum link AR gerado até agora.</p>';
+  }
+
+  return `
+    <div class="audit-list">
+      ${state.ar.historico.map(item => `
+        <article class="audit-row ar-audit-row">
+          <span>${escapeHtml(item.data_geracao || '-')}</span>
+          <strong>${escapeHtml(item.produto || 'Produto')}</strong>
+          <span>${escapeHtml(item.parceiro || '-')}</span>
+          <span>${escapeHtml(item.grupo || '-')}</span>
+          <small>${escapeHtml(item.usuario || '')}</small>
+        </article>
+      `).join('')}
+    </div>
+  `;
+}
+
+function alterarBuscaAr(valor) {
+  state.ar.busca = valor;
+  renderPainelAr();
+}
+
+function selecionarProdutoAr(id) {
+  state.ar.produtoId = id;
+  state.ar.resultado = null;
+  state.ar.alertas = [];
+  renderPainelAr();
+}
+
+function selecionarParceiroAr(id) {
+  state.ar.parceiroId = id;
+  state.ar.resultado = null;
+  state.ar.alertas = [];
+  renderPainelAr();
+}
+
+function selecionarAbaAr(aba) {
+  state.ar.aba = aba;
+  renderPainelAr();
+}
+
+async function gerarLinksAr() {
+  if (!state.ar.produtoId || !state.ar.parceiroId) {
+    state.ar.message = 'Selecione um produto e um parceiro.';
+    renderPainelAr();
+    return;
+  }
+
+  try {
+    state.ar.message = '';
+    state.ar.gerando = true;
+    atualizarBotaoAr('Gerando...', true, 'is-saving');
+
+    const response = await chamarApi('generateArLinks', {
+      produto_id: state.ar.produtoId,
+      parceiro_id: state.ar.parceiroId
+    });
+
+    if (!response.ok) {
+      throw new Error(obterMensagemApi(response, 'Não foi possível gerar os links.'));
+    }
+
+    state.ar.gerando = false;
+    state.ar.resultado = response.data;
+    state.ar.alertas = response.data.alertas || [];
+    atualizarBotaoAr('Gerado', true, 'is-saved');
+    await esperar(500);
+    renderPainelAr();
+  } catch (erro) {
+    state.ar.gerando = false;
+    state.ar.resultado = null;
+    state.ar.message = erro.message || 'Erro ao gerar links.';
+    atualizarBotaoAr('Gerar links', false, '');
+    renderPainelAr();
+  }
+}
+
+function atualizarBotaoAr(texto, disabled, classe) {
+  const botao = document.getElementById('ar_gerar_btn');
+
+  if (!botao) return;
+
+  botao.textContent = texto;
+  botao.disabled = disabled;
+  botao.classList.remove('is-saving', 'is-saved');
+
+  if (classe) {
+    botao.classList.add(classe);
+  }
+}
+
+async function copiarTextoAr(botaoId, texto, original) {
+  const botao = document.getElementById(botaoId);
+
+  try {
+    await navigator.clipboard.writeText(texto);
+
+    if (botao) {
+      botao.textContent = 'Link copiado';
+      botao.classList.add('copied');
+      window.setTimeout(() => {
+        botao.textContent = original;
+        botao.classList.remove('copied');
+      }, 1600);
+    }
+  } catch (erro) {
+    if (botao) {
+      botao.textContent = 'Erro ao copiar';
+      window.setTimeout(() => {
+        botao.textContent = original;
+      }, 1600);
+    }
+  }
+}
+
+function obterProdutoSelecionadoAr() {
+  return state.ar.produtos.find(produto => produto.id === state.ar.produtoId) || null;
+}
+
+function obterParceiroSelecionadoAr() {
+  return state.ar.parceiros.find(parceiro => parceiro.id === state.ar.parceiroId) || null;
+}
+
+function normalizarBuscaAr(texto) {
+  return String(texto || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
 function abrirLink(url) {
   if (!url) return;
   window.open(url, '_blank', 'noopener');
@@ -1548,7 +1908,13 @@ function obterMensagemApi(response, fallback) {
     LINK_NOT_FOUND: 'Link não encontrado.',
     INVALID_PASSWORD_ITEM: 'Informe o título do acesso.',
     INVALID_LOGIN: 'Informe o usuário/login.',
-    INVALID_PASSWORD: 'Informe a senha.'
+    INVALID_PASSWORD: 'Informe a senha.',
+    AR_PRODUCT_REQUIRED: 'Selecione um produto válido.',
+    AR_PARTNER_REQUIRED: 'Selecione um parceiro válido.',
+    AR_PRODUCT_WITHOUT_ID: 'Produto sem Product ID. O link não será gerado.',
+    AR_PARTNER_WITHOUT_CODE: 'Parceiro sem código revendedor. O link não será gerado.',
+    AR_PARTNER_INACTIVE: 'Parceiro inativo. O link não será gerado.',
+    AR_TEMPLATE_MISSING: 'Templates de link AR não configurados.'
   };
 
   return mensagens[code] || response?.message || response?.error?.message || fallback;
