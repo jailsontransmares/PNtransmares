@@ -18,6 +18,13 @@
   --color-success: var(--cor-destaque);
   --color-warning: #F59E0B;
   --color-error: #DC2626;
+  --surface-glass: rgba(255, 255, 255, 0.72);
+  --surface-glass-strong: rgba(255, 255, 255, 0.86);
+  --surface-glass-dark: rgba(15, 23, 42, 0.32);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.45);
+  --glass-border-subtle: 1px solid rgba(15, 23, 42, 0.08);
+  --glass-blur: blur(18px);
+  --glass-blur-strong: blur(24px);
   --radius-card: 18px;
   --radius-card-compact: 14px;
   --radius-card-highlight: 22px;
@@ -51,6 +58,10 @@ body.dark {
   --texto-suave: #CBD5E1;
   --borda: #334155;
   --color-surface-muted: color-mix(in srgb, var(--fundo) 64%, var(--card));
+  --surface-glass: rgba(15, 23, 42, 0.72);
+  --surface-glass-strong: rgba(17, 24, 39, 0.88);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.10);
+  --glass-border-subtle: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 * {
@@ -88,10 +99,13 @@ body {
 }
 
 .topbar {
-  background: color-mix(in srgb, var(--card) 92%, transparent);
-  border: var(--border-subtle);
+  background: rgba(255, 255, 255, 0.94);
+  background: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
   border-radius: var(--radius-card-highlight);
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
   display: flex;
   justify-content: space-between;
   gap: var(--space-xl);
@@ -101,9 +115,13 @@ body {
 }
 
 .topbar::before {
+  background: rgba(255, 255, 255, 0.94);
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--cor-principal) 8%, var(--card)), var(--card));
-  border: 1px dashed color-mix(in srgb, var(--cor-principal) 26%, var(--borda));
+    linear-gradient(135deg, color-mix(in srgb, var(--cor-principal) 9%, transparent), transparent),
+    var(--surface-glass-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px dashed color-mix(in srgb, var(--cor-principal) 24%, rgba(255, 255, 255, 0.42));
   border-radius: var(--radius-card-compact);
   content: "";
   flex: 0 0 156px;
@@ -133,8 +151,11 @@ body.dark .brand h1 {
 }
 
 .user-box {
-  background: var(--color-surface-muted);
-  border: var(--border-subtle);
+  background: rgba(255, 255, 255, 0.94);
+  background: var(--surface-glass-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border-subtle);
   border-radius: var(--radius-card);
   color: var(--texto-suave);
   min-width: 220px;
@@ -187,7 +208,7 @@ body.dark .brand h1 {
   width: 40px;
   height: 40px;
   border-radius: var(--radius-card-compact);
-  background: color-mix(in srgb, var(--cor-principal) 12%, var(--card));
+  background: color-mix(in srgb, var(--cor-principal) 12%, var(--surface-glass-strong));
   border: 1px solid color-mix(in srgb, var(--cor-principal) 16%, var(--borda));
   display: inline-flex;
   align-items: center;
@@ -196,8 +217,11 @@ body.dark .brand h1 {
 }
 
 .quick-links-strip {
-  background: var(--card);
-  border: var(--border-subtle);
+  background: rgba(255, 255, 255, 0.94);
+  background: var(--surface-glass-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border-subtle);
   border-radius: var(--radius-card);
   padding: 14px 16px;
   margin-bottom: var(--space-xl);
@@ -263,8 +287,9 @@ body.dark .brand h1 {
 
 .info-card,
 .module-card {
-  background: var(--card);
-  border: var(--border-subtle);
+  background: rgba(255, 255, 255, 0.94);
+  background: color-mix(in srgb, var(--surface-glass-strong) 92%, var(--card));
+  border: var(--glass-border-subtle);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
   padding: 20px;
