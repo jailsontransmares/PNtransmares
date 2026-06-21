@@ -1657,11 +1657,11 @@ function renderPainelParceiroMvpAr() {
 
   return `
     <div class="ar-mvp-card-title">Parceiro</div>
-    <div class="ar-mvp-line">
+    <div class="ar-mvp-line ar-autocomplete-wrap">
       <label>Nome do Parceiro</label>
       <div>
-        <input class="ar-mvp-input" list="ar_parceiros_list" type="search" value="${escapeAttr(state.ar.parceiroBusca)}" placeholder="Digite o nome do parceiro" oninput="alterarBuscaParceiroAr(this.value)" onchange="confirmarParceiroDigitadoAr(this.value)">
-        ${renderDatalistParceirosAr()}
+        <input class="ar-mvp-input" type="search" value="${escapeAttr(state.ar.parceiroBusca)}" placeholder="Digite o nome do parceiro" oninput="alterarBuscaParceiroAr(this.value)" autocomplete="off">
+        ${renderSugestoesParceirosAr()}
       </div>
     </div>
     ${parceiro ? `
@@ -1709,8 +1709,7 @@ function renderCampoProdutoMvpAr(rotulo, chave) {
   return `
     <label>
       <span>${escapeHtml(rotulo)}</span>
-      <input class="ar-mvp-input" list="ar_produtos_${escapeAttr(chave)}_list" type="search" value="${escapeAttr(state.ar.filtros[chave] || '')}" oninput="alterarFiltroProdutoAr('${escapeAttr(chave)}', this.value)" onchange="confirmarProdutoDigitadoAr()">
-      ${renderDatalistProdutoAr(chave)}
+      <input class="ar-mvp-input" type="search" value="${escapeAttr(state.ar.filtros[chave] || '')}" oninput="alterarFiltroProdutoAr('${escapeAttr(chave)}', this.value)" autocomplete="off">
     </label>
   `;
 }
@@ -1820,38 +1819,6 @@ function renderTabelaProdutosAr() {
   `;
 }
 
-function renderDatalistProdutoAr(chave) {
-  const valores = obterValoresProdutoDatalistAr(chave);
-
-  return `
-    <datalist id="ar_produtos_${escapeAttr(chave)}_list">
-      ${valores.map(valor => `<option value="${escapeAttr(valor)}"></option>`).join('')}
-    </datalist>
-  `;
-}
-
-function obterValoresProdutoDatalistAr(chave) {
-  const campoPorChave = {
-    ac: produto => produto.ac,
-    produto: produto => produto.descricao_comercial,
-    midia: produto => produto.midia,
-    modelo: produto => produto.modelo,
-    validade: produto => produto.validade
-  };
-  const getter = campoPorChave[chave] || (() => '');
-  const valores = [];
-
-  state.ar.produtos.forEach(produto => {
-    const valor = getter(produto);
-
-    if (valor && valores.indexOf(valor) === -1) {
-      valores.push(valor);
-    }
-  });
-
-  return valores.sort((a, b) => String(a).localeCompare(String(b)));
-}
-
 function renderOpcoesProdutosAr() {
   const produtos = produtosFiltradosAr().slice(0, 8);
 
@@ -1867,14 +1834,6 @@ function renderOpcoesProdutosAr() {
       <small>${escapeHtml(produto.grupo_com_desconto || produto.codigo_grupo || produto.grupo || 'Sem grupo')} | Com desc.: ${escapeHtml(produto.preco_com_desconto || 'Não disponível')} | Sem desc.: ${escapeHtml(produto.preco_sem_desconto || 'Não disponível')}</small>
     </button>
   `).join('');
-}
-
-function renderDatalistParceirosAr() {
-  return `
-    <datalist id="ar_parceiros_list">
-      ${state.ar.parceiros.map(parceiro => `<option value="${escapeAttr(parceiro.nome_completo || parceiro.nome || '')}"></option>`).join('')}
-    </datalist>
-  `;
 }
 
 function parceirosFiltradosAr() {
@@ -1899,6 +1858,29 @@ function parceirosFiltradosAr() {
 
     return texto.indexOf(termo) >= 0;
   }).slice(0, 8);
+}
+
+function renderSugestoesParceirosAr() {
+  if (!normalizarBuscaAr(state.ar.parceiroBusca) || state.ar.parceiroId) {
+    return '';
+  }
+
+  const parceiros = parceirosFiltradosAr();
+
+  if (!parceiros.length) {
+    return '<div class="ar-suggestions"><p>Nenhum parceiro encontrado.</p></div>';
+  }
+
+  return `
+    <div class="ar-suggestions">
+      ${parceiros.map(parceiro => `
+        <button type="button" onclick="selecionarParceiroAr('${escapeAttr(parceiro.id)}')">
+          <strong>${escapeHtml(parceiro.nome_completo || parceiro.nome || 'Parceiro')}</strong>
+          <span>${escapeHtml([parceiro.codigo_revendedor || 'sem código', parceiro.status || '-'].join(' | '))}</span>
+        </button>
+      `).join('')}
+    </div>
+  `;
 }
 
 function renderOpcoesParceirosAr() {
@@ -2058,7 +2040,7 @@ function alterarFiltroProdutoAr(chave, valor) {
 
 function alterarBuscaParceiroAr(valor) {
   state.ar.parceiroBusca = valor;
-  selecionarParceiroPorTextoAr(valor);
+  state.ar.parceiroId = '';
   state.ar.resultado = null;
   state.ar.alertas = [];
   agendarRenderPainelAr();
