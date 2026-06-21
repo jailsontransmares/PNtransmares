@@ -1664,7 +1664,7 @@ function renderGeradorLinksAr() {
         </div>
         ${renderResumoSelecaoAr()}
         ${renderOrcamentoAr()}
-        <button id="ar_gerar_btn" class="save-btn saving-btn ${state.ar.gerando ? 'is-saving' : ''}" type="button" onclick="gerarLinksAr()" ${state.ar.gerando ? 'disabled' : ''}>${state.ar.gerando ? 'Gerando...' : 'Gerar links'}</button>
+        <button id="ar_gerar_btn" class="save-btn saving-btn ${state.ar.gerando ? 'is-saving' : ''}" type="button" onclick="gerarLinksAr()" ${state.ar.gerando || !state.ar.produtoId || !state.ar.parceiroId ? 'disabled' : ''}>${state.ar.gerando ? 'Gerando...' : 'Gerar links'}</button>
         ${renderResultadoAr()}
       </section>
     </div>
@@ -1701,7 +1701,10 @@ function produtosFiltradosAr() {
         produto.modelo,
         produto.validade,
         produto.grupo,
-        produto.codigo_grupo
+        produto.codigo_grupo,
+        produto.grupo_com_desconto,
+        produto.grupo_sem_desconto,
+        produto.termos_busca
       ].join(' '));
 
       return termos.every(termo => texto.indexOf(termo) >= 0);
@@ -1712,7 +1715,7 @@ function produtosFiltradosAr() {
 
   return state.ar.produtos.filter(produto => {
     return campoProdutoCombinaAr(produto.ac, filtros.ac)
-      && campoProdutoCombinaAr([produto.descricao_comercial, produto.product_id, produto.tipo_certificado, produto.grupo, produto.codigo_grupo].join(' '), filtros.produto)
+      && campoProdutoCombinaAr([produto.descricao_comercial, produto.product_id, produto.tipo_certificado, produto.grupo, produto.codigo_grupo, produto.grupo_com_desconto, produto.grupo_sem_desconto, produto.termos_busca].join(' '), filtros.produto)
       && campoProdutoCombinaAr(produto.midia, filtros.midia)
       && campoProdutoCombinaAr(produto.modelo, filtros.modelo)
       && campoProdutoCombinaAr(produto.validade, filtros.validade);
@@ -1749,7 +1752,7 @@ function renderTabelaProdutosAr() {
           <span>${escapeHtml(produto.ac || '-')}</span>
           <span>${escapeHtml(produto.modelo || '-')}</span>
           <span>${escapeHtml(produto.validade || '-')}</span>
-          <span>${escapeHtml(produto.codigo_grupo || produto.grupo || '-')}</span>
+          <span>${escapeHtml(produto.grupo_com_desconto || produto.codigo_grupo || produto.grupo || '-')}</span>
           <span>${escapeHtml(produto.preco_com_desconto || 'Não disponível')}</span>
           <span>${escapeHtml(produto.preco_sem_desconto || 'Não disponível')}</span>
           <span>${escapeHtml(produto.economia || '-')}</span>
@@ -1772,7 +1775,7 @@ function renderOpcoesProdutosAr() {
       <strong>${escapeHtml(produto.descricao_comercial || 'Produto')}</strong>
       <span>${escapeHtml([produto.product_id, produto.ac, produto.modelo].filter(Boolean).join(' | '))}</span>
       <b>Validade: ${escapeHtml(produto.validade || '-')}</b>
-      <small>${escapeHtml(produto.codigo_grupo || produto.grupo || 'Sem grupo')} | Com desc.: ${escapeHtml(produto.preco_com_desconto || 'Não disponível')} | Sem desc.: ${escapeHtml(produto.preco_sem_desconto || 'Não disponível')}</small>
+      <small>${escapeHtml(produto.grupo_com_desconto || produto.codigo_grupo || produto.grupo || 'Sem grupo')} | Com desc.: ${escapeHtml(produto.preco_com_desconto || 'Não disponível')} | Sem desc.: ${escapeHtml(produto.preco_sem_desconto || 'Não disponível')}</small>
     </button>
   `).join('');
 }
@@ -1787,10 +1790,14 @@ function parceirosFiltradosAr() {
   return state.ar.parceiros.filter(parceiro => {
     const texto = normalizarBuscaAr([
       parceiro.nome,
+      parceiro.nome_completo,
       parceiro.nome_empresa,
+      parceiro.cnpj_empresa,
       parceiro.codigo_revendedor,
       parceiro.status,
-      parceiro.email_comercial
+      parceiro.email_cadastro_certificado,
+      parceiro.email_comercial,
+      parceiro.observacoes
     ].join(' '));
 
     return texto.indexOf(termo) >= 0;
@@ -1806,9 +1813,9 @@ function renderOpcoesParceirosAr() {
 
   return parceiros.map(parceiro => `
     <button class="ar-partner-option ${state.ar.parceiroId === parceiro.id ? 'selected' : ''}" type="button" onclick="selecionarParceiroAr('${escapeAttr(parceiro.id)}')">
-      <strong>${escapeHtml(parceiro.nome || 'Parceiro')}</strong>
+      <strong>${escapeHtml(parceiro.nome_completo || parceiro.nome || 'Parceiro')}</strong>
       <span>${escapeHtml([parceiro.codigo_revendedor || 'sem código', parceiro.status || '-'].join(' | '))}</span>
-      ${parceiro.nome_empresa ? `<small>${escapeHtml(parceiro.nome_empresa)}</small>` : ''}
+      ${parceiro.nome_empresa || parceiro.email_cadastro_certificado ? `<small>${escapeHtml([parceiro.nome_empresa, parceiro.email_cadastro_certificado].filter(Boolean).join(' | '))}</small>` : ''}
     </button>
   `).join('');
 }
@@ -1825,7 +1832,7 @@ function renderResumoSelecaoAr() {
       </div>
       <div>
         <span>Parceiro</span>
-        <strong>${escapeHtml(parceiro?.nome || 'Nenhum parceiro selecionado')}</strong>
+        <strong>${escapeHtml(parceiro?.nome_completo || parceiro?.nome || 'Nenhum parceiro selecionado')}</strong>
         ${parceiro ? renderDetalhesParceiroAr(parceiro) : ''}
       </div>
     </div>
@@ -1835,12 +1842,14 @@ function renderResumoSelecaoAr() {
 function renderDetalhesParceiroAr(parceiro) {
   const linhas = [
     ['Empresa', parceiro.nome_empresa],
+    ['CNPJ', parceiro.cnpj_empresa],
     ['Código revendedor', parceiro.codigo_revendedor || 'sem código'],
     ['Status', parceiro.status || 'não informado'],
+    ['E-mail para cadastro', parceiro.email_cadastro_certificado],
     ['WhatsApp pessoal', parceiro.whatsapp_pessoal],
     ['WhatsApp comercial', parceiro.whatsapp_comercial],
     ['E-mail comercial', parceiro.email_comercial],
-    ['Observação', parceiro.observacao]
+    ['Observação', parceiro.observacoes || parceiro.observacao]
   ];
 
   return `
@@ -1883,6 +1892,7 @@ function renderResultadoAr() {
   if (!state.ar.resultado) {
     return '';
   }
+  const links = obterLinksResultadoAr();
 
   return `
     <div class="ar-result">
@@ -1891,19 +1901,26 @@ function renderResultadoAr() {
       <article>
         <span>Link com desconto</span>
         <div class="link-buttons">
-          <a class="link-sub-btn" href="${escapeAttr(state.ar.resultado.links.com_desconto)}" target="_blank" rel="noopener">Abrir</a>
-          <button id="ar_copy_com" class="link-sub-btn" type="button" onclick="copiarTextoAr('ar_copy_com', '${escapeAttr(state.ar.resultado.links.com_desconto)}', 'Copiar')">Copiar</button>
+          <a class="link-sub-btn" href="${escapeAttr(links.com_desconto)}" target="_blank" rel="noopener">Abrir</a>
+          <button id="ar_copy_com" class="link-sub-btn" type="button" onclick="copiarTextoAr('ar_copy_com', '${escapeAttr(links.com_desconto)}', 'Copiar')">Copiar</button>
         </div>
       </article>
       <article>
         <span>Link sem desconto</span>
         <div class="link-buttons">
-          <a class="link-sub-btn" href="${escapeAttr(state.ar.resultado.links.sem_desconto)}" target="_blank" rel="noopener">Abrir</a>
-          <button id="ar_copy_sem" class="link-sub-btn" type="button" onclick="copiarTextoAr('ar_copy_sem', '${escapeAttr(state.ar.resultado.links.sem_desconto)}', 'Copiar')">Copiar</button>
+          <a class="link-sub-btn" href="${escapeAttr(links.sem_desconto)}" target="_blank" rel="noopener">Abrir</a>
+          <button id="ar_copy_sem" class="link-sub-btn" type="button" onclick="copiarTextoAr('ar_copy_sem', '${escapeAttr(links.sem_desconto)}', 'Copiar')">Copiar</button>
         </div>
       </article>
     </div>
   `;
+}
+
+function obterLinksResultadoAr() {
+  return {
+    com_desconto: state.ar.resultado?.links?.com_desconto || state.ar.resultado?.link_com_desconto || '',
+    sem_desconto: state.ar.resultado?.links?.sem_desconto || state.ar.resultado?.link_sem_desconto || ''
+  };
 }
 
 function renderHistoricoAr() {
@@ -1967,7 +1984,7 @@ function selecionarProdutoAr(id) {
 function selecionarParceiroAr(id) {
   state.ar.parceiroId = id;
   const parceiro = obterParceiroSelecionadoAr();
-  state.ar.parceiroBusca = parceiro ? parceiro.nome : state.ar.parceiroBusca;
+  state.ar.parceiroBusca = parceiro ? (parceiro.nome_completo || parceiro.nome) : state.ar.parceiroBusca;
   state.ar.resultado = null;
   state.ar.alertas = [];
   renderPainelAr();
