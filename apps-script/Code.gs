@@ -164,8 +164,8 @@ const SHEET_HEADERS = {
 const CONFIG_PADRAO = [
   ['nome_sistema', 'PAINEL TRANSMARES', 'Nome exibido no topo do sistema.', 'texto'],
   ['subtitulo_sistema', 'Central operacional da Transmares Corretora de Seguros', 'Subtítulo exibido no topo do sistema.', 'texto'],
-  ['cor_principal', '#0B3A66', 'Cor principal da interface.', 'cor'],
-  ['cor_secundaria', '#123C69', 'Cor secundária da interface.', 'cor'],
+  ['cor_principal', '#294895', 'Cor principal da interface.', 'cor'],
+  ['cor_secundaria', '#1F3676', 'Cor secundária da interface.', 'cor'],
   ['cor_destaque', '#16A34A', 'Cor de destaque da interface.', 'cor'],
   ['modo_visual_padrao', 'claro', 'Modo visual padrão para usuários sem preferência.', 'lista'],
   ['exibir_logo', 'nao', 'Define se a logo deve ser exibida no topo.', 'booleano'],
