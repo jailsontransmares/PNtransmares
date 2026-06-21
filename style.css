@@ -527,7 +527,23 @@ body.dark .module-card {
   align-self: start;
   display: flex;
   flex-direction: column;
-  padding: 8px;
+  gap: 4px;
+  padding: 10px;
+  position: sticky;
+  top: 14px;
+}
+
+.admin-nav-label {
+  color: var(--texto-suave);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  margin: 10px 8px 4px;
+  text-transform: uppercase;
+}
+
+.admin-nav-label:first-child {
+  margin-top: 4px;
 }
 
 .admin-tab {
@@ -543,9 +559,13 @@ body.dark .module-card {
 }
 
 .admin-tab.active {
-  background: var(--color-primary-soft);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.86), var(--glass-blue-bg-strong)),
+    var(--color-primary-soft);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 22%, transparent);
   color: var(--color-primary);
   font-weight: 700;
+  box-shadow: 0 8px 20px rgba(41, 72, 149, 0.10);
 }
 
 .admin-panel {
@@ -585,14 +605,15 @@ body.dark .module-card {
 .config-groups {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 }
 
 .config-group {
-  border: 1px solid var(--borda);
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.56);
+  border: var(--glass-border-neutral);
+  border-radius: var(--radius-card-compact);
   min-width: 0;
-  padding: 10px;
+  padding: 12px;
 }
 
 .config-group-header {
@@ -612,12 +633,13 @@ body.dark .module-card {
 }
 
 .config-row {
-  border: 0;
-  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-surface-muted) 48%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 7%, transparent);
+  border-radius: var(--radius-card-compact);
   display: grid;
   gap: 8px;
   grid-template-columns: minmax(150px, 0.9fr) minmax(190px, 1.1fr);
-  padding: 6px;
+  padding: 10px;
 }
 
 .config-info {
@@ -758,6 +780,104 @@ body.dark .module-card {
 .crud-actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.admin-preview-grid,
+.admin-module-summary,
+.admin-prepared-list {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-module-summary {
+  margin-bottom: 14px;
+}
+
+.admin-preview-card,
+.admin-module-card,
+.admin-prepared-box,
+.admin-prepared-list article {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.88), var(--glass-blue-bg)),
+    var(--surface-glass-strong);
+  border: var(--glass-border-subtle);
+  border-radius: var(--radius-card-compact);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.admin-preview-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+}
+
+.admin-preview-card span,
+.admin-module-card span {
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-preview-card strong {
+  color: var(--color-navy);
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.admin-preview-card p,
+.admin-module-card p,
+.admin-prepared-box p {
+  color: var(--texto-suave);
+  font-size: 13px;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.admin-prepared-box {
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.admin-prepared-box strong {
+  color: var(--color-navy);
+  display: block;
+  font-size: 15px;
+  margin-bottom: 5px;
+}
+
+.admin-module-card {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 14px;
+}
+
+.admin-module-card strong {
+  color: var(--color-navy);
+  display: block;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.admin-module-card span {
+  background: var(--color-primary-soft);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, transparent);
+  border-radius: 999px;
+  flex: 0 0 auto;
+  padding: 5px 8px;
+}
+
+.admin-prepared-list {
+  margin-top: 12px;
+}
+
+.admin-prepared-list article {
+  color: var(--texto);
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 13px;
 }
 
 .icon-btn {
@@ -1027,6 +1147,11 @@ body.dark .module-card {
 }
 
 body.dark .admin-panel-header h2,
+body.dark .admin-preview-card strong,
+body.dark .admin-module-card strong,
+body.dark .admin-prepared-box strong,
+body.dark .ar-home-hero h2,
+body.dark .ar-home-card h3,
 body.dark .password-row h3 {
   color: #E8EEF9;
 }
@@ -1407,7 +1532,7 @@ body.dark .password-row h3 {
 }
 
 .ar-mvp-line-title label {
-  background: #0B3A66;
+  background: var(--color-primary);
   color: white;
 }
 
@@ -1470,7 +1595,7 @@ body.dark .password-row h3 {
 .ar-mvp-band strong,
 .ar-mvp-price strong {
   align-items: center;
-  background: #0B3A66;
+  background: var(--color-primary);
   color: white;
   display: flex;
   font-size: 14px;
@@ -1540,7 +1665,7 @@ body.dark .password-row h3 {
 }
 
 .ar-mvp-card-title {
-  color: #0B3A66;
+  color: var(--color-primary);
   font-size: 15px;
   font-weight: 900;
   margin-bottom: 10px;
@@ -1556,7 +1681,7 @@ body.dark .password-row h3 {
 
 .ar-mvp-line label,
 .ar-mvp-fields label span {
-  background: #0B3A66;
+  background: var(--color-primary);
   border: 0;
   color: white;
   font-size: 12px;
@@ -1719,7 +1844,7 @@ body.dark .password-row h3 {
 }
 
 .ar-partner-code {
-  background: #0B3A66;
+  background: var(--color-primary);
   border-radius: 10px;
   color: white;
   padding: 10px 12px;
@@ -1764,7 +1889,7 @@ body.dark .password-row h3 {
 
 .ar-mvp-band strong,
 .ar-mvp-price strong {
-  background: #0B3A66;
+  background: var(--color-primary);
   font-size: 13px;
 }
 
@@ -1813,7 +1938,7 @@ body.dark .password-row h3 {
 
 .ar-mvp .ar-mvp-line label,
 .ar-mvp .ar-mvp-fields label span {
-  background: linear-gradient(135deg, #0B3A66, #155C93);
+  background: linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 82%, white));
   border: 0;
 }
 
@@ -1833,7 +1958,7 @@ body.dark .password-row h3 {
 
 .ar-mvp .ar-mvp-band strong,
 .ar-mvp .ar-mvp-price strong {
-  background: linear-gradient(135deg, #0B3A66, #123C69);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
 }
 
 .ar-mvp .ar-mvp-price.discount strong,
@@ -1978,9 +2103,16 @@ body.dark .password-row h3 {
   }
 
   .admin-shell,
+  .admin-preview-grid,
+  .admin-module-summary,
+  .admin-prepared-list,
   .config-groups,
   .config-row {
     grid-template-columns: 1fr;
+  }
+
+  .admin-tabs {
+    position: static;
   }
 
   .admin-panel-header {
@@ -2037,6 +2169,18 @@ body.dark .password-row h3 {
   .module-tabs {
     width: 100%;
   }
+
+  .ar-home-hero {
+    flex-direction: column;
+  }
+
+  .ar-home-stats {
+    justify-content: flex-start;
+  }
+
+  .ar-home-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 460px) {
@@ -2044,6 +2188,137 @@ body.dark .password-row h3 {
     grid-template-columns: 1fr;
   }
 }
+/* ===== Painel AR — Home interna ===== */
+
+.ar-home-shell {
+  display: grid;
+  gap: 16px;
+}
+
+.ar-home-hero {
+  align-items: flex-start;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.88), var(--glass-blue-bg-strong)),
+    var(--surface-glass-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border-blue);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 18px;
+}
+
+.ar-home-hero h2 {
+  color: var(--color-navy);
+  font-size: 24px;
+  line-height: 1.2;
+  margin: 4px 0 6px;
+}
+
+.ar-home-hero p {
+  color: var(--texto-suave);
+  font-size: 14px;
+  line-height: 1.45;
+  margin: 0;
+  max-width: 640px;
+}
+
+.ar-home-stats {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.ar-home-stats span {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(41, 72, 149, 0.14);
+  border-radius: 999px;
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 10px;
+}
+
+.ar-home-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ar-home-card {
+  align-items: stretch;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), var(--glass-blue-bg)),
+    var(--surface-glass-strong);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(41, 72, 149, 0.12);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  min-height: 156px;
+  padding: 18px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.ar-home-card:hover,
+.ar-home-card:focus-visible {
+  border-color: rgba(41, 72, 149, 0.22);
+  box-shadow: var(--shadow-card-hover);
+  outline: 0;
+  transform: translateY(-2px);
+}
+
+.ar-home-card span {
+  color: var(--color-primary);
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 850;
+  margin-bottom: 10px;
+}
+
+.ar-home-card h3 {
+  color: var(--color-navy);
+  font-size: 19px;
+  line-height: 1.2;
+  margin: 0 0 8px;
+}
+
+.ar-home-card p {
+  color: var(--texto-suave);
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.ar-home-card > strong {
+  align-items: center;
+  align-self: flex-start;
+  background: var(--color-primary-soft);
+  border: 1px solid rgba(41, 72, 149, 0.16);
+  border-radius: 999px;
+  color: var(--color-primary);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 24px;
+  height: 34px;
+  justify-content: center;
+  line-height: 1;
+  width: 34px;
+}
+
+.ar-home-note {
+  margin-top: 0;
+}
+
 /* ===== Painel AR — MVP integrado ===== */
 
 .ar-mvp-shell {
