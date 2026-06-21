@@ -86,6 +86,7 @@ const state = {
     alertas: [],
     aba: 'gerar',
     renderTimer: null,
+    campoProdutoAtivo: '',
     loading: false,
     gerando: false,
     message: ''
@@ -1707,9 +1708,12 @@ function renderPainelProdutoMvpAr() {
 
 function renderCampoProdutoMvpAr(rotulo, chave) {
   return `
-    <label>
+    <label class="ar-autocomplete-wrap">
       <span>${escapeHtml(rotulo)}</span>
-      <input class="ar-mvp-input" type="search" value="${escapeAttr(state.ar.filtros[chave] || '')}" oninput="alterarFiltroProdutoAr('${escapeAttr(chave)}', this.value)" autocomplete="off">
+      <div>
+        <input class="ar-mvp-input" type="search" value="${escapeAttr(state.ar.filtros[chave] || '')}" onfocus="ativarCampoProdutoAr('${escapeAttr(chave)}')" oninput="alterarFiltroProdutoAr('${escapeAttr(chave)}', this.value)" autocomplete="off">
+        ${renderSugestoesProdutoCampoAr(chave)}
+      </div>
     </label>
   `;
 }
@@ -1834,6 +1838,50 @@ function renderOpcoesProdutosAr() {
       <small>${escapeHtml(produto.grupo_com_desconto || produto.codigo_grupo || produto.grupo || 'Sem grupo')} | Com desc.: ${escapeHtml(produto.preco_com_desconto || 'Não disponível')} | Sem desc.: ${escapeHtml(produto.preco_sem_desconto || 'Não disponível')}</small>
     </button>
   `).join('');
+}
+
+function renderSugestoesProdutoCampoAr(chave) {
+  if (state.ar.campoProdutoAtivo !== chave || !normalizarBuscaAr(state.ar.filtros[chave])) {
+    return '';
+  }
+
+  const valores = obterSugestoesProdutoCampoAr(chave);
+
+  if (!valores.length) {
+    return '<div class="ar-suggestions"><p>Nenhuma correspondência encontrada.</p></div>';
+  }
+
+  return `
+    <div class="ar-suggestions">
+      ${valores.map(valor => `
+        <button type="button" onclick="selecionarSugestaoProdutoAr('${escapeAttr(chave)}', '${escapeAttr(valor)}')">
+          <strong>${escapeHtml(valor)}</strong>
+        </button>
+      `).join('')}
+    </div>
+  `;
+}
+
+function obterSugestoesProdutoCampoAr(chave) {
+  const filtro = normalizarBuscaAr(state.ar.filtros[chave]);
+  const getter = {
+    ac: produto => produto.ac,
+    produto: produto => produto.descricao_comercial,
+    midia: produto => produto.midia,
+    modelo: produto => produto.modelo,
+    validade: produto => produto.validade
+  }[chave] || (() => '');
+  const valores = [];
+
+  state.ar.produtos.forEach(produto => {
+    const valor = getter(produto);
+
+    if (valor && normalizarBuscaAr(valor).indexOf(filtro) >= 0 && valores.indexOf(valor) === -1) {
+      valores.push(valor);
+    }
+  });
+
+  return valores.sort((a, b) => String(a).localeCompare(String(b))).slice(0, 8);
 }
 
 function parceirosFiltradosAr() {
@@ -2031,11 +2079,26 @@ function campoProdutoCombinaAr(valor, filtro) {
 }
 
 function alterarFiltroProdutoAr(chave, valor) {
+  state.ar.campoProdutoAtivo = chave;
   state.ar.filtros[chave] = valor;
   selecionarProdutoPorFiltrosAr();
   state.ar.resultado = null;
   state.ar.alertas = [];
   agendarRenderPainelAr();
+}
+
+function ativarCampoProdutoAr(chave) {
+  state.ar.campoProdutoAtivo = chave;
+  agendarRenderPainelAr();
+}
+
+function selecionarSugestaoProdutoAr(chave, valor) {
+  state.ar.filtros[chave] = valor;
+  state.ar.campoProdutoAtivo = '';
+  selecionarProdutoPorFiltrosAr();
+  state.ar.resultado = null;
+  state.ar.alertas = [];
+  renderPainelAr();
 }
 
 function alterarBuscaParceiroAr(valor) {
