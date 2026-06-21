@@ -1310,6 +1310,19 @@ body.dark .brand h1 {
   position: relative;
 }
 
+.ar-mvp-fields .ar-autocomplete-wrap {
+  overflow: visible;
+  position: relative;
+  z-index: 4;
+}
+
+.ar-mvp-fields .ar-autocomplete-wrap > div {
+  align-items: stretch;
+  display: block;
+  min-width: 0;
+  position: relative;
+}
+
 .ar-suggestions {
   background: white;
   border: 1px solid #D7E0EA;
