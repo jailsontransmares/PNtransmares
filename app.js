@@ -47,6 +47,13 @@ const state = {
     categorias: [],
     grupos: [],
     items: [],
+    resumo: {
+      total: 0,
+      ativos: 0,
+      inativos: 0
+    },
+    historico: [],
+    aba: 'acessos',
     filtros: {
       categoria: '',
       grupo: '',
@@ -1188,6 +1195,8 @@ async function carregarCentralSenhas() {
     state.passwords.categorias = response.data.categorias || [];
     state.passwords.grupos = response.data.grupos || [];
     state.passwords.items = response.data.acessos || [];
+    state.passwords.resumo = response.data.resumo || { total: 0, ativos: 0, inativos: 0 };
+    state.passwords.historico = response.data.historico || [];
     state.passwords.loading = false;
     renderCentralSenhas();
   } catch (erro) {
@@ -1223,35 +1232,72 @@ function renderCentralSenhas() {
             <h2>Central de Senhas</h2>
             <p>${gestor ? 'Listagem e cadastro de acessos.' : 'Consulte os acessos disponíveis.'}</p>
           </div>
-        </div>
-
-        <div class="links-toolbar">
-          <select class="config-input" onchange="alterarFiltroSenha('categoria', this.value)">
-            <option value="">Todas as categorias</option>
-            ${state.passwords.categorias.map(item => `<option value="${escapeAttr(item.nome)}" ${state.passwords.filtros.categoria === item.nome ? 'selected' : ''}>${escapeHtml(item.nome)}</option>`).join('')}
-          </select>
-
-          <select class="config-input" onchange="alterarFiltroSenha('grupo', this.value)">
-            <option value="">Todos os grupos</option>
-            ${state.passwords.grupos.map(item => `<option value="${escapeAttr(item.nome)}" ${state.passwords.filtros.grupo === item.nome ? 'selected' : ''}>${escapeHtml(item.nome)}</option>`).join('')}
-          </select>
-
           ${gestor ? `
-            <select class="config-input" onchange="alterarFiltroSenha('status', this.value)">
-              <option value="">Todos os status</option>
-              <option value="ativo" ${state.passwords.filtros.status === 'ativo' ? 'selected' : ''}>ativos</option>
-              <option value="inativo" ${state.passwords.filtros.status === 'inativo' ? 'selected' : ''}>inativos</option>
-            </select>
-            <button class="add-small-btn" type="button" onclick="abrirModalSenha('')">+ Adicionar</button>
+            <div class="module-tabs" role="group" aria-label="Visualização da Central de Senhas">
+              <button class="${state.passwords.aba === 'acessos' ? 'active' : ''}" type="button" onclick="selecionarAbaSenhas('acessos')">Acessos</button>
+              <button class="${state.passwords.aba === 'historico' ? 'active' : ''}" type="button" onclick="selecionarAbaSenhas('historico')">Histórico</button>
+            </div>
           ` : ''}
         </div>
 
+        ${renderResumoSenhas(gestor)}
+        ${state.passwords.aba === 'acessos' ? renderToolbarSenhas(gestor) : ''}
+
         ${state.passwords.message ? `<p class="admin-message">${escapeHtml(state.passwords.message)}</p>` : ''}
-        ${state.passwords.loading ? '<p class="quick-link-empty">Carregando acessos...</p>' : renderListaSenhas(gestor)}
-        ${renderModalSenha()}
+        ${state.passwords.loading ? '<p class="quick-link-empty">Carregando acessos...</p>' : renderConteudoSenhas(gestor)}
+        ${state.passwords.aba === 'acessos' ? renderModalSenha() : ''}
       </section>
     </main>
   `;
+}
+
+function renderResumoSenhas(gestor) {
+  if (!gestor) {
+    return '';
+  }
+
+  const resumo = state.passwords.resumo || {};
+
+  return `
+    <div class="module-stats" aria-label="Resumo da Central de Senhas">
+      <span><strong>${Number(resumo.total || 0)}</strong> cadastrados</span>
+      <span><strong>${Number(resumo.ativos || 0)}</strong> ativos</span>
+      <span><strong>${Number(resumo.inativos || 0)}</strong> inativos</span>
+    </div>
+  `;
+}
+
+function renderToolbarSenhas(gestor) {
+  return `
+    <div class="links-toolbar">
+      <select class="config-input" onchange="alterarFiltroSenha('categoria', this.value)">
+        <option value="">Todas as categorias</option>
+        ${state.passwords.categorias.map(item => `<option value="${escapeAttr(item.nome)}" ${state.passwords.filtros.categoria === item.nome ? 'selected' : ''}>${escapeHtml(item.nome)}</option>`).join('')}
+      </select>
+
+      <select class="config-input" onchange="alterarFiltroSenha('grupo', this.value)">
+        <option value="">Todos os grupos</option>
+        ${state.passwords.grupos.map(item => `<option value="${escapeAttr(item.nome)}" ${state.passwords.filtros.grupo === item.nome ? 'selected' : ''}>${escapeHtml(item.nome)}</option>`).join('')}
+      </select>
+
+      ${gestor ? `
+        <select class="config-input" onchange="alterarFiltroSenha('status', this.value)">
+          <option value="">Todos os status</option>
+          <option value="ativo" ${state.passwords.filtros.status === 'ativo' ? 'selected' : ''}>ativos</option>
+          <option value="inativo" ${state.passwords.filtros.status === 'inativo' ? 'selected' : ''}>inativos</option>
+        </select>
+        <button class="add-small-btn" type="button" onclick="abrirModalSenha('')">+ Adicionar</button>
+      ` : ''}
+    </div>
+  `;
+}
+
+function renderConteudoSenhas(gestor) {
+  if (state.passwords.aba === 'historico' && gestor) {
+    return renderHistoricoSenhas();
+  }
+
+  return renderListaSenhas(gestor);
 }
 
 function renderListaSenhas(gestor) {
@@ -1284,6 +1330,26 @@ function renderSenhaItem(item, gestor) {
 
       ${gestor ? `<div class="crud-actions"><button class="icon-btn" type="button" onclick="abrirModalSenha('${escapeAttr(item.id)}')" title="Editar" aria-label="Editar acesso">✎</button></div>` : ''}
     </article>
+  `;
+}
+
+function renderHistoricoSenhas() {
+  if (!state.passwords.historico.length) {
+    return '<p class="quick-link-empty">Nenhuma alteração registrada na Central de Senhas.</p>';
+  }
+
+  return `
+    <div class="audit-list">
+      ${state.passwords.historico.map(item => `
+        <article class="audit-row">
+          <span>${escapeHtml(item.data_evento || '-')}</span>
+          <strong>${escapeHtml(item.titulo || 'Acesso')}</strong>
+          <span>${escapeHtml(item.operacao === 'criacao' ? 'criação' : 'edição')}</span>
+          <span>${escapeHtml(item.status || '-')}</span>
+          <small>${escapeHtml(item.usuario_email || '')}</small>
+        </article>
+      `).join('')}
+    </div>
   `;
 }
 
@@ -1336,6 +1402,12 @@ function obterSenhaModalAtual() {
 function alterarFiltroSenha(chave, valor) {
   state.passwords.filtros[chave] = valor;
   carregarCentralSenhas();
+}
+
+function selecionarAbaSenhas(aba) {
+  state.passwords.aba = aba;
+  state.passwords.modalAberto = false;
+  renderCentralSenhas();
 }
 
 function abrirModalSenha(id) {
