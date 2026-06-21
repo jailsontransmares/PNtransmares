@@ -85,6 +85,7 @@ const state = {
     resultado: null,
     alertas: [],
     aba: 'gerar',
+    renderTimer: null,
     loading: false,
     gerando: false,
     message: ''
@@ -1655,21 +1656,22 @@ function renderPainelParceiroMvpAr() {
   const parceiro = obterParceiroSelecionadoAr();
 
   return `
-    <div class="ar-mvp-line ar-mvp-line-title">
+    <div class="ar-mvp-card-title">Parceiro</div>
+    <div class="ar-mvp-line">
       <label>Nome do Parceiro</label>
       <div>
-        <input class="ar-mvp-input" type="search" value="${escapeAttr(state.ar.parceiroBusca)}" placeholder="Digite nome, empresa ou código" oninput="alterarBuscaParceiroAr(this.value)">
+        <input class="ar-mvp-input" list="ar_parceiros_list" type="search" value="${escapeAttr(state.ar.parceiroBusca)}" placeholder="Digite o nome do parceiro" oninput="alterarBuscaParceiroAr(this.value)" onchange="confirmarParceiroDigitadoAr(this.value)">
+        ${renderDatalistParceirosAr()}
       </div>
     </div>
-    <div class="ar-mvp-options">
-      ${renderOpcoesParceirosAr()}
-    </div>
-    ${renderLinhaParceiroMvpAr('Possui vínculo ativo com a empresa/escritório', parceiro ? (parceiro.status || 'não informado') : '')}
-    ${renderLinhaParceiroMvpAr('Código do Parceiro', parceiro ? (parceiro.codigo_revendedor || 'sem código') : '')}
-    ${renderLinhaParceiroMvpAr('Dt.: aniversário', '')}
-    ${renderLinhaParceiroMvpAr('Telefone1', parceiro ? (parceiro.whatsapp_pessoal || '') : '')}
-    ${renderLinhaParceiroMvpAr('Telefone2', parceiro ? (parceiro.whatsapp_comercial || '') : '')}
-    ${renderLinhaParceiroMvpAr('E-mail para cadastro', parceiro ? (parceiro.email_cadastro_certificado || parceiro.email_comercial || '') : '')}
+    ${parceiro ? `
+      ${renderLinhaParceiroMvpAr('Possui vínculo ativo com a empresa/escritório', parceiro.status || 'não informado')}
+      ${renderLinhaParceiroMvpAr('Código do Parceiro', parceiro.codigo_revendedor || 'sem código')}
+      ${renderLinhaParceiroMvpAr('Dt.: aniversário', '')}
+      ${renderLinhaParceiroMvpAr('Telefone1', parceiro.whatsapp_pessoal || '')}
+      ${renderLinhaParceiroMvpAr('Telefone2', parceiro.whatsapp_comercial || '')}
+      ${renderLinhaParceiroMvpAr('E-mail para cadastro', parceiro.email_cadastro_certificado || parceiro.email_comercial || '')}
+    ` : ''}
   `;
 }
 
@@ -1686,15 +1688,13 @@ function renderPainelProdutoMvpAr() {
   const produto = obterProdutoSelecionadoAr();
 
   return `
+    <div class="ar-mvp-card-title">Produto</div>
     <div class="ar-mvp-fields">
       ${renderCampoProdutoMvpAr('AC para compra', 'ac')}
       ${renderCampoProdutoMvpAr('Produto desejado', 'produto')}
       ${renderCampoProdutoMvpAr('Mídia', 'midia')}
       ${renderCampoProdutoMvpAr('Modelo', 'modelo')}
       ${renderCampoProdutoMvpAr('Validade', 'validade')}
-    </div>
-    <div class="ar-mvp-options ar-mvp-product-options">
-      ${renderOpcoesProdutosAr()}
     </div>
     ${renderResumoProdutoMvpAr(produto)}
     ${renderOrcamentoAr()}
@@ -1709,19 +1709,15 @@ function renderCampoProdutoMvpAr(rotulo, chave) {
   return `
     <label>
       <span>${escapeHtml(rotulo)}</span>
-      <input class="ar-mvp-input" type="search" value="${escapeAttr(state.ar.filtros[chave] || '')}" oninput="alterarFiltroProdutoAr('${escapeAttr(chave)}', this.value)">
+      <input class="ar-mvp-input" list="ar_produtos_${escapeAttr(chave)}_list" type="search" value="${escapeAttr(state.ar.filtros[chave] || '')}" oninput="alterarFiltroProdutoAr('${escapeAttr(chave)}', this.value)" onchange="confirmarProdutoDigitadoAr()">
+      ${renderDatalistProdutoAr(chave)}
     </label>
   `;
 }
 
 function renderResumoProdutoMvpAr(produto) {
   if (!produto) {
-    return `
-      <div class="ar-mvp-band product">
-        <strong>PRODUTO:</strong>
-        <span>Selecione um produto nas correspondências</span>
-      </div>
-    `;
+    return '';
   }
 
   return `
@@ -1824,6 +1820,38 @@ function renderTabelaProdutosAr() {
   `;
 }
 
+function renderDatalistProdutoAr(chave) {
+  const valores = obterValoresProdutoDatalistAr(chave);
+
+  return `
+    <datalist id="ar_produtos_${escapeAttr(chave)}_list">
+      ${valores.map(valor => `<option value="${escapeAttr(valor)}"></option>`).join('')}
+    </datalist>
+  `;
+}
+
+function obterValoresProdutoDatalistAr(chave) {
+  const campoPorChave = {
+    ac: produto => produto.ac,
+    produto: produto => produto.descricao_comercial,
+    midia: produto => produto.midia,
+    modelo: produto => produto.modelo,
+    validade: produto => produto.validade
+  };
+  const getter = campoPorChave[chave] || (() => '');
+  const valores = [];
+
+  state.ar.produtos.forEach(produto => {
+    const valor = getter(produto);
+
+    if (valor && valores.indexOf(valor) === -1) {
+      valores.push(valor);
+    }
+  });
+
+  return valores.sort((a, b) => String(a).localeCompare(String(b)));
+}
+
 function renderOpcoesProdutosAr() {
   const produtos = produtosFiltradosAr().slice(0, 8);
 
@@ -1839,6 +1867,14 @@ function renderOpcoesProdutosAr() {
       <small>${escapeHtml(produto.grupo_com_desconto || produto.codigo_grupo || produto.grupo || 'Sem grupo')} | Com desc.: ${escapeHtml(produto.preco_com_desconto || 'Não disponível')} | Sem desc.: ${escapeHtml(produto.preco_sem_desconto || 'Não disponível')}</small>
     </button>
   `).join('');
+}
+
+function renderDatalistParceirosAr() {
+  return `
+    <datalist id="ar_parceiros_list">
+      ${state.ar.parceiros.map(parceiro => `<option value="${escapeAttr(parceiro.nome_completo || parceiro.nome || '')}"></option>`).join('')}
+    </datalist>
+  `;
 }
 
 function parceirosFiltradosAr() {
@@ -2014,18 +2050,65 @@ function campoProdutoCombinaAr(valor, filtro) {
 
 function alterarFiltroProdutoAr(chave, valor) {
   state.ar.filtros[chave] = valor;
-  state.ar.produtoId = '';
+  selecionarProdutoPorFiltrosAr();
   state.ar.resultado = null;
   state.ar.alertas = [];
-  renderPainelAr();
+  agendarRenderPainelAr();
 }
 
 function alterarBuscaParceiroAr(valor) {
   state.ar.parceiroBusca = valor;
-  state.ar.parceiroId = '';
+  selecionarParceiroPorTextoAr(valor);
   state.ar.resultado = null;
   state.ar.alertas = [];
+  agendarRenderPainelAr();
+}
+
+function confirmarParceiroDigitadoAr(valor) {
+  selecionarParceiroPorTextoAr(valor);
   renderPainelAr();
+}
+
+function confirmarProdutoDigitadoAr() {
+  selecionarProdutoPorFiltrosAr();
+  renderPainelAr();
+}
+
+function selecionarParceiroPorTextoAr(valor) {
+  const texto = normalizarBuscaAr(valor);
+  const parceiro = state.ar.parceiros.find(item => {
+    return normalizarBuscaAr(item.nome_completo || item.nome) === texto
+      || normalizarBuscaAr(item.codigo_revendedor) === texto;
+  });
+
+  state.ar.parceiroId = parceiro ? parceiro.id : '';
+}
+
+function selecionarProdutoPorFiltrosAr() {
+  const filtrados = produtosFiltradosAr();
+
+  if (filtrados.length === 1) {
+    state.ar.produtoId = filtrados[0].id;
+    return;
+  }
+
+  const filtros = state.ar.filtros || {};
+  const produtoExato = state.ar.produtos.find(produto => {
+    return (!filtros.ac || normalizarBuscaAr(produto.ac) === normalizarBuscaAr(filtros.ac))
+      && (!filtros.produto || normalizarBuscaAr(produto.descricao_comercial) === normalizarBuscaAr(filtros.produto))
+      && (!filtros.midia || normalizarBuscaAr(produto.midia) === normalizarBuscaAr(filtros.midia))
+      && (!filtros.modelo || normalizarBuscaAr(produto.modelo) === normalizarBuscaAr(filtros.modelo))
+      && (!filtros.validade || normalizarBuscaAr(produto.validade) === normalizarBuscaAr(filtros.validade));
+  });
+
+  state.ar.produtoId = produtoExato ? produtoExato.id : '';
+}
+
+function agendarRenderPainelAr() {
+  window.clearTimeout(state.ar.renderTimer);
+  state.ar.renderTimer = window.setTimeout(() => {
+    renderPainelAr();
+  }, 220);
 }
 
 function selecionarProdutoAr(id) {
