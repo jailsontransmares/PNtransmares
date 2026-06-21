@@ -1441,6 +1441,8 @@ function normalizarProdutoAr_(row, headers, rowNumber) {
     codigo_grupo: obterValorAlias_(row, headers, ['codigo_grupo', 'código grupo', 'cod_grupo', 'grupo_codigo', 'grupo código', 'codigo', 'código']),
     preco_com_desconto: obterValorAlias_(row, headers, ['preco_com_desconto', 'preço com desconto', 'valor_com_desconto', 'valor com desconto', 'com desconto']),
     preco_sem_desconto: obterValorAlias_(row, headers, ['preco_sem_desconto', 'preço sem desconto', 'valor_sem_desconto', 'valor sem desconto', 'sem desconto']),
+    link_com_desconto: obterValorAlias_(row, headers, ['link_com_desconto', 'link com desconto', 'url_com_desconto', 'url com desconto']),
+    link_sem_desconto: obterValorAlias_(row, headers, ['link_sem_desconto', 'link sem desconto', 'url_sem_desconto', 'url sem desconto']),
     ativo_raw: obterValorAlias_(row, headers, ['ativo', 'status']),
     observacao: obterValorAlias_(row, headers, ['observacao', 'observação', 'obs'])
   };
@@ -1506,6 +1508,15 @@ function obterParceiroArPorId_(parceiroId) {
 }
 
 function obterTemplatesAr_(config, produto) {
+  const fallback = obterTemplatesConfigAr_(config, produto);
+
+  return {
+    com_desconto: produto.link_com_desconto || fallback.com_desconto || '',
+    sem_desconto: produto.link_sem_desconto || fallback.sem_desconto || ''
+  };
+}
+
+function obterTemplatesConfigAr_(config, produto) {
   const templatesLote = parseJsonSeguro_(config.ar_link_templates_json);
   const chaves = [
     produto.codigo_grupo,
