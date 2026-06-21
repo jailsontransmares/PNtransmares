@@ -243,14 +243,41 @@ function renderDashboard() {
 
       <section class="module-grid">
         ${state.cards.map(card => `
-          <article class="module-card" onclick="abrirModulo('${escapeAttr(card.id)}')">
-            <h3>${escapeHtml(card.titulo)}</h3>
-            <p>${escapeHtml(card.descricao || '')}</p>
+          <article class="module-card" role="button" tabindex="0" onclick="abrirModulo('${escapeAttr(card.id)}')" onkeydown="acionarCardModulo(event, '${escapeAttr(card.id)}')">
+            <div class="module-card-top">
+              <span class="module-card-icon" aria-hidden="true">${renderIconeModulo(card.id)}</span>
+              <span class="module-card-arrow" aria-hidden="true">›</span>
+            </div>
+            <div>
+              <h3>${escapeHtml(card.titulo)}</h3>
+              <p>${escapeHtml(card.descricao || '')}</p>
+            </div>
           </article>
         `).join('')}
       </section>
     </main>
   `;
+}
+
+function acionarCardModulo(event, id) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    abrirModulo(id);
+  }
+}
+
+function renderIconeModulo(id) {
+  const icones = {
+    administracao: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M4 17h16"/><path d="M8 4v6"/><path d="M16 14v6"/></svg>',
+    'central-senhas': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V8a4 4 0 0 1 8 0v2"/><path d="M12 14v2"/></svg>',
+    'painel-ar': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h7v7H4z"/><path d="M13 5h7v5h-7z"/><path d="M13 12h7v7h-7z"/><path d="M4 14h7v5H4z"/></svg>'
+  };
+
+  if (String(id || '').indexOf('links') >= 0) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.1 0l1.4-1.4a5 5 0 0 0-7.1-7.1L10.6 5"/><path d="M14 11a5 5 0 0 0-7.1 0l-1.4 1.4a5 5 0 0 0 7.1 7.1l.8-.8"/></svg>';
+  }
+
+  return icones[id] || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14" rx="3"/><path d="M8 9h8"/><path d="M8 13h5"/></svg>';
 }
 
 function renderAvisos() {
