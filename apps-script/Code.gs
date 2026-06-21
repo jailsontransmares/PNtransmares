@@ -230,6 +230,10 @@ function doGet(e) {
         exigirGestor_();
         result = savePasswordItem(payload);
         break;
+      case 'diagnosticoFase4':
+        exigirGestor_();
+        result = diagnosticoFase4();
+        break;
       default:
         result = erro_('ACTION_NOT_FOUND', 'Ação não encontrada.', action);
     }
@@ -683,6 +687,8 @@ function getPasswordsData(payload) {
     },
     categorias: listarRegistrosAtivosAdmin_('categorias'),
     grupos: listarRegistrosAtivosAdmin_('grupos'),
+    resumo: obterResumoSenhas_(gestor),
+    historico: gestor ? listarHistoricoSenhas_(8) : [],
     acessos: listarAcessosSenha_({
       filtros,
       gestor
@@ -741,6 +747,8 @@ function savePasswordItem(payload) {
     }
   }
 
+  const operacao = linha === -1 ? 'criacao' : 'edicao';
+
   if (linha === -1) {
     idFinal = idFinal || `senha_${Utilities.getUuid().slice(0, 8)}`;
     const row = new Array(headers.length).fill('');
@@ -787,7 +795,8 @@ function savePasswordItem(payload) {
   registrarAuditoria_('savePasswordItem', 'Itens', JSON.stringify({
     id: idFinal,
     titulo,
-    status
+    status,
+    operacao
   }));
 
   return sucesso_('savePasswordItem', {
@@ -802,6 +811,28 @@ function savePasswordItem(payload) {
       grupo,
       status
     }
+  });
+}
+
+function diagnosticoFase4() {
+  garantirAbasBase();
+  const usuario = obterUsuarioAutorizado_();
+  const gestor = normalizar_(usuario.perfil) === 'gestor';
+
+  return sucesso_('diagnosticoFase4', {
+    usuario: {
+      email: usuario.email,
+      perfil: usuario.perfil,
+      gestor
+    },
+    central_senhas: obterResumoSenhas_(true),
+    historico: listarHistoricoSenhas_(5),
+    endpoints: [
+      'getPasswordsData',
+      'savePasswordItem',
+      'diagnosticoFase4'
+    ],
+    timestamp: new Date().toISOString()
   });
 }
 
@@ -1113,6 +1144,64 @@ function listarAcessosSenha_(options) {
   }).sort(function(a, b) {
     return String(a.titulo).localeCompare(String(b.titulo));
   });
+}
+
+function obterResumoSenhas_(gestor) {
+  const acessos = listarAcessosSenha_({
+    filtros: {},
+    gestor: Boolean(gestor)
+  });
+
+  return acessos.reduce(function(acc, item) {
+    acc.total += 1;
+
+    if (normalizar_(item.status) === 'ativo') {
+      acc.ativos += 1;
+    } else {
+      acc.inativos += 1;
+    }
+
+    return acc;
+  }, {
+    total: 0,
+    ativos: 0,
+    inativos: 0
+  });
+}
+
+function listarHistoricoSenhas_(limite) {
+  const sheet = obterPlanilha_().getSheetByName('Historico_Auditoria');
+
+  if (!sheet) {
+    return [];
+  }
+
+  return lerAbaComoObjetos_(sheet).filter(function(row) {
+    return row.acao === 'savePasswordItem';
+  }).sort(function(a, b) {
+    const dataA = converterData_(a.data_evento);
+    const dataB = converterData_(b.data_evento);
+    return (dataB ? dataB.getTime() : 0) - (dataA ? dataA.getTime() : 0);
+  }).slice(0, limite || 8).map(function(row) {
+    const detalhes = parseJsonSeguro_(row.detalhes);
+
+    return {
+      data_evento: formatarDataHora_(row.data_evento),
+      usuario_email: row.usuario_email || '',
+      titulo: detalhes.titulo || '',
+      status: detalhes.status || '',
+      operacao: detalhes.operacao || '',
+      id: detalhes.id || ''
+    };
+  });
+}
+
+function parseJsonSeguro_(texto) {
+  try {
+    return JSON.parse(String(texto || '{}'));
+  } catch (error) {
+    return {};
+  }
 }
 
 function parseListaEmails_(valor) {
