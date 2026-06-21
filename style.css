@@ -1,28 +1,45 @@
 :root {
-  --cor-principal: #0B3A66;
-  --cor-secundaria: #123C69;
+  --cor-principal: #294895;
+  --cor-secundaria: #1F3676;
   --cor-destaque: #16A34A;
-  --fundo: #F3F4F6;
+  --fundo: #F5F7FA;
   --card: #FFFFFF;
-  --texto: #111827;
-  --texto-suave: #6B7280;
-  --borda: #E5E7EB;
+  --texto: #0B172A;
+  --texto-suave: #64748B;
+  --borda: rgba(15, 23, 42, 0.08);
   --color-primary: var(--cor-principal);
+  --color-primary-dark: #1F3676;
+  --color-primary-soft: #E8EEF9;
   --color-secondary: var(--cor-secundaria);
+  --color-accent: #E3062C;
+  --color-accent-dark: #B90423;
+  --color-accent-soft: #FDE8EC;
+  --color-navy: #071D3A;
+  --color-gray: #9A9CA3;
+  --color-gray-soft: #EEF1F5;
   --color-background: var(--fundo);
   --color-surface: var(--card);
-  --color-surface-muted: color-mix(in srgb, var(--fundo) 72%, var(--card));
+  --color-surface-muted: #F1F4F8;
   --color-border: var(--borda);
   --color-text: var(--texto);
   --color-text-muted: var(--texto-suave);
-  --color-success: var(--cor-destaque);
+  --color-success: #16A34A;
   --color-warning: #F59E0B;
-  --color-error: #DC2626;
-  --surface-glass: rgba(255, 255, 255, 0.72);
-  --surface-glass-strong: rgba(255, 255, 255, 0.86);
+  --color-error: #E3062C;
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-bg-strong: rgba(255, 255, 255, 0.86);
+  --glass-blue-bg: rgba(41, 72, 149, 0.08);
+  --glass-blue-bg-strong: rgba(41, 72, 149, 0.12);
+  --glass-red-bg: rgba(227, 6, 44, 0.06);
+  --glass-red-bg-strong: rgba(227, 6, 44, 0.10);
+  --surface-glass: var(--glass-bg);
+  --surface-glass-strong: var(--glass-bg-strong);
   --surface-glass-dark: rgba(15, 23, 42, 0.32);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.45);
-  --glass-border-subtle: 1px solid rgba(15, 23, 42, 0.08);
+  --glass-border-blue: 1px solid rgba(41, 72, 149, 0.16);
+  --glass-border-red: 1px solid rgba(227, 6, 44, 0.14);
+  --glass-border-neutral: 1px solid rgba(15, 23, 42, 0.08);
+  --glass-border: var(--glass-border-blue);
+  --glass-border-subtle: 1px solid rgba(41, 72, 149, 0.10);
   --glass-blur: blur(18px);
   --glass-blur-strong: blur(24px);
   --radius-card: 18px;
@@ -58,8 +75,12 @@ body.dark {
   --texto-suave: #CBD5E1;
   --borda: #334155;
   --color-surface-muted: color-mix(in srgb, var(--fundo) 64%, var(--card));
-  --surface-glass: rgba(15, 23, 42, 0.72);
-  --surface-glass-strong: rgba(17, 24, 39, 0.88);
+  --glass-bg: rgba(15, 23, 42, 0.72);
+  --glass-bg-strong: rgba(17, 24, 39, 0.88);
+  --glass-blue-bg: rgba(41, 72, 149, 0.18);
+  --glass-blue-bg-strong: rgba(41, 72, 149, 0.24);
+  --surface-glass: var(--glass-bg);
+  --surface-glass-strong: var(--glass-bg-strong);
   --glass-border: 1px solid rgba(255, 255, 255, 0.10);
   --glass-border-subtle: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -100,7 +121,9 @@ body {
 
 .topbar {
   background: rgba(255, 255, 255, 0.94);
-  background: var(--surface-glass);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.82), var(--glass-blue-bg)),
+    var(--surface-glass);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: var(--glass-border);
@@ -114,18 +137,10 @@ body {
   padding: 22px 24px;
 }
 
-.topbar::before {
-  background: rgba(255, 255, 255, 0.94);
+body.dark .topbar {
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--cor-principal) 9%, transparent), transparent),
-    var(--surface-glass-strong);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px dashed color-mix(in srgb, var(--cor-principal) 24%, rgba(255, 255, 255, 0.42));
-  border-radius: var(--radius-card-compact);
-  content: "";
-  flex: 0 0 156px;
-  height: 56px;
+    linear-gradient(135deg, rgba(17, 24, 39, 0.88), var(--glass-blue-bg)),
+    var(--surface-glass);
 }
 
 .brand {
@@ -133,15 +148,46 @@ body {
   min-width: 0;
 }
 
+.brand-logo-slot {
+  align-items: center;
+  background: #FFFFFF;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.88), var(--glass-blue-bg)),
+    var(--surface-glass-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: var(--radius-card-compact);
+  display: flex;
+  flex: 0 0 178px;
+  height: 64px;
+  justify-content: center;
+  padding: 8px 12px;
+}
+
+body.dark .brand-logo-slot {
+  background:
+    linear-gradient(135deg, rgba(17, 24, 39, 0.88), var(--glass-blue-bg)),
+    var(--surface-glass-strong);
+}
+
+.brand-logo-slot img {
+  display: block;
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+
 .brand h1 {
   margin: 0;
   font-size: 26px;
   font-weight: 800;
-  color: var(--cor-principal);
+  color: var(--color-navy);
 }
 
 body.dark .brand h1 {
-  color: #EF4444;
+  color: #E8EEF9;
 }
 
 .brand p {
@@ -176,6 +222,7 @@ body.dark .brand h1 {
 }
 
 .theme-btn:hover {
+  background: var(--color-primary-dark);
   box-shadow: var(--shadow-card-hover);
   transform: translateY(-1px);
 }
@@ -301,12 +348,18 @@ body.dark .brand h1 {
 .module-card {
   background: rgba(255, 255, 255, 0.82);
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--cor-principal) 7%, transparent), transparent),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), var(--glass-blue-bg)),
     color-mix(in srgb, var(--surface-glass) 84%, var(--card));
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: var(--glass-border);
   box-shadow: 0 8px 26px rgba(15, 23, 42, 0.08);
+}
+
+body.dark .module-card {
+  background:
+    linear-gradient(135deg, rgba(17, 24, 39, 0.88), var(--glass-blue-bg)),
+    color-mix(in srgb, var(--surface-glass) 84%, var(--card));
 }
 
 .info-card h2,
@@ -429,6 +482,11 @@ body.dark .brand h1 {
 .save-btn:hover:not(:disabled) {
   box-shadow: var(--shadow-card);
   transform: translateY(-1px);
+}
+
+.save-btn:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
 }
 
 .save-btn:disabled,
@@ -1834,9 +1892,9 @@ body.dark .brand h1 {
     align-items: flex-start;
   }
 
-  .topbar::before {
+  .brand-logo-slot {
     flex-basis: auto;
-    width: 170px;
+    width: 190px;
   }
 
   .user-box {
