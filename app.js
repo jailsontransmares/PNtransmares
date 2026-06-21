@@ -1639,34 +1639,95 @@ function renderConteudoAr(gestor) {
 
 function renderGeradorLinksAr() {
   return `
-    <div class="ar-generator">
-      <section class="ar-step">
-        <h3>Produto</h3>
-        <div class="ar-search-grid">
-          <label><span>AC para compra</span><input class="config-input" type="search" value="${escapeAttr(state.ar.filtros.ac)}" oninput="alterarFiltroProdutoAr('ac', this.value)"></label>
-          <label><span>Produto desejado</span><input class="config-input" type="search" value="${escapeAttr(state.ar.filtros.produto)}" oninput="alterarFiltroProdutoAr('produto', this.value)"></label>
-          <label><span>Mídia</span><input class="config-input" type="search" value="${escapeAttr(state.ar.filtros.midia)}" oninput="alterarFiltroProdutoAr('midia', this.value)"></label>
-          <label><span>Modelo</span><input class="config-input" type="search" value="${escapeAttr(state.ar.filtros.modelo)}" oninput="alterarFiltroProdutoAr('modelo', this.value)"></label>
-          <label><span>Validade</span><input class="config-input" type="search" value="${escapeAttr(state.ar.filtros.validade)}" oninput="alterarFiltroProdutoAr('validade', this.value)"></label>
-        </div>
-        <div class="ar-product-options">
-          ${renderOpcoesProdutosAr()}
-        </div>
+    <div class="ar-mvp">
+      <section class="ar-mvp-partner">
+        ${renderPainelParceiroMvpAr()}
       </section>
 
-      <section class="ar-side">
-        <label>
-          <span>Parceiro</span>
-          <input class="config-input" type="search" value="${escapeAttr(state.ar.parceiroBusca)}" placeholder="Digite nome, empresa ou código" oninput="alterarBuscaParceiroAr(this.value)">
-        </label>
-        <div class="ar-partner-options">
-          ${renderOpcoesParceirosAr()}
-        </div>
-        ${renderResumoSelecaoAr()}
-        ${renderOrcamentoAr()}
-        <button id="ar_gerar_btn" class="save-btn saving-btn ${state.ar.gerando ? 'is-saving' : ''}" type="button" onclick="gerarLinksAr()" ${state.ar.gerando || !state.ar.produtoId || !state.ar.parceiroId ? 'disabled' : ''}>${state.ar.gerando ? 'Gerando...' : 'Gerar links'}</button>
-        ${renderResultadoAr()}
+      <section class="ar-mvp-product">
+        ${renderPainelProdutoMvpAr()}
       </section>
+    </div>
+  `;
+}
+
+function renderPainelParceiroMvpAr() {
+  const parceiro = obterParceiroSelecionadoAr();
+
+  return `
+    <div class="ar-mvp-line ar-mvp-line-title">
+      <label>Nome do Parceiro</label>
+      <div>
+        <input class="ar-mvp-input" type="search" value="${escapeAttr(state.ar.parceiroBusca)}" placeholder="Digite nome, empresa ou código" oninput="alterarBuscaParceiroAr(this.value)">
+      </div>
+    </div>
+    <div class="ar-mvp-options">
+      ${renderOpcoesParceirosAr()}
+    </div>
+    ${renderLinhaParceiroMvpAr('Possui vínculo ativo com a empresa/escritório', parceiro ? (parceiro.status || 'não informado') : '')}
+    ${renderLinhaParceiroMvpAr('Código do Parceiro', parceiro ? (parceiro.codigo_revendedor || 'sem código') : '')}
+    ${renderLinhaParceiroMvpAr('Dt.: aniversário', '')}
+    ${renderLinhaParceiroMvpAr('Telefone1', parceiro ? (parceiro.whatsapp_pessoal || '') : '')}
+    ${renderLinhaParceiroMvpAr('Telefone2', parceiro ? (parceiro.whatsapp_comercial || '') : '')}
+    ${renderLinhaParceiroMvpAr('E-mail para cadastro', parceiro ? (parceiro.email_cadastro_certificado || parceiro.email_comercial || '') : '')}
+  `;
+}
+
+function renderLinhaParceiroMvpAr(rotulo, valor) {
+  return `
+    <div class="ar-mvp-line">
+      <label>${escapeHtml(rotulo)}</label>
+      <div>${escapeHtml(valor || '')}</div>
+    </div>
+  `;
+}
+
+function renderPainelProdutoMvpAr() {
+  const produto = obterProdutoSelecionadoAr();
+
+  return `
+    <div class="ar-mvp-fields">
+      ${renderCampoProdutoMvpAr('AC para compra', 'ac')}
+      ${renderCampoProdutoMvpAr('Produto desejado', 'produto')}
+      ${renderCampoProdutoMvpAr('Mídia', 'midia')}
+      ${renderCampoProdutoMvpAr('Modelo', 'modelo')}
+      ${renderCampoProdutoMvpAr('Validade', 'validade')}
+    </div>
+    <div class="ar-mvp-options ar-mvp-product-options">
+      ${renderOpcoesProdutosAr()}
+    </div>
+    ${renderResumoProdutoMvpAr(produto)}
+    ${renderOrcamentoAr()}
+    <div class="ar-mvp-actions">
+      <button id="ar_gerar_btn" class="save-btn saving-btn ${state.ar.gerando ? 'is-saving' : ''}" type="button" onclick="gerarLinksAr()" ${state.ar.gerando || !state.ar.produtoId || !state.ar.parceiroId ? 'disabled' : ''}>${state.ar.gerando ? 'Gerando...' : 'Gerar links'}</button>
+    </div>
+    ${renderResultadoAr()}
+  `;
+}
+
+function renderCampoProdutoMvpAr(rotulo, chave) {
+  return `
+    <label>
+      <span>${escapeHtml(rotulo)}</span>
+      <input class="ar-mvp-input" type="search" value="${escapeAttr(state.ar.filtros[chave] || '')}" oninput="alterarFiltroProdutoAr('${escapeAttr(chave)}', this.value)">
+    </label>
+  `;
+}
+
+function renderResumoProdutoMvpAr(produto) {
+  if (!produto) {
+    return `
+      <div class="ar-mvp-band product">
+        <strong>PRODUTO:</strong>
+        <span>Selecione um produto nas correspondências</span>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="ar-mvp-band product">
+      <strong>PRODUTO:</strong>
+      <span>${escapeHtml(produto.descricao_comercial || 'Produto')}</span>
     </div>
   `;
 }
@@ -1873,16 +1934,9 @@ function renderOrcamentoAr() {
 
   return `
     <div class="ar-budget">
-      <div class="ar-budget-product">
-        <span>Produto</span>
-        <strong>${escapeHtml(produto.descricao_comercial || 'Produto')}</strong>
-        <small>${escapeHtml(produto.modelo || '-')} | Validade: ${escapeHtml(produto.validade || '-')}</small>
-      </div>
-      <div class="ar-budget-values">
-        <div class="discount"><span>Com desconto</span><strong>${escapeHtml(formatarMoedaProdutoAr(produto.preco_com_desconto))}</strong></div>
-        <div><span>Sem desconto</span><strong>${escapeHtml(formatarMoedaProdutoAr(produto.preco_sem_desconto))}</strong></div>
-        <div class="economy"><span>Economia</span><strong>${escapeHtml(economia)}</strong></div>
-      </div>
+      <div class="ar-mvp-price discount"><strong>${escapeHtml(formatarMoedaProdutoAr(produto.preco_com_desconto))}</strong><span>Com desconto:</span></div>
+      <div class="ar-mvp-price full"><strong>${escapeHtml(formatarMoedaProdutoAr(produto.preco_sem_desconto))}</strong><span>SEM desconto:</span></div>
+      <div class="ar-mvp-price economy"><strong>${escapeHtml(economia)}</strong><span>Economia:</span></div>
       <button id="ar_copy_orcamento" class="link-sub-btn" type="button" onclick="copiarOrcamentoAr()">Copiar orçamento</button>
     </div>
   `;
