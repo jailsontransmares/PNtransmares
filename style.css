@@ -829,6 +829,23 @@ body.dark .brand h1 {
   margin: 0 0 8px;
 }
 
+.ar-search-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ar-search-grid label {
+  display: grid;
+  gap: 4px;
+}
+
+.ar-search-grid label span {
+  color: var(--texto-suave);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .ar-toolbar {
   align-items: center;
   display: grid;
@@ -902,13 +919,15 @@ body.dark .brand h1 {
   margin-top: 2px;
 }
 
-.ar-product-options {
+.ar-product-options,
+.ar-partner-options {
   display: grid;
   gap: 8px;
   margin-top: 10px;
 }
 
-.ar-product-option {
+.ar-product-option,
+.ar-partner-option {
   background: var(--card);
   border: 1px solid var(--borda);
   border-left: 4px solid transparent;
@@ -922,19 +941,34 @@ body.dark .brand h1 {
 }
 
 .ar-product-option:hover,
-.ar-product-option.selected {
+.ar-product-option.selected,
+.ar-partner-option:hover,
+.ar-partner-option.selected {
   border-color: var(--cor-principal);
   border-left-color: var(--cor-principal);
 }
 
-.ar-product-option strong {
+.ar-product-option strong,
+.ar-partner-option strong {
   font-size: 13px;
 }
 
 .ar-product-option span,
-.ar-product-option small {
+.ar-product-option small,
+.ar-partner-option span,
+.ar-partner-option small {
   color: var(--texto-suave);
   font-size: 12px;
+}
+
+.ar-product-option b {
+  background: color-mix(in srgb, var(--cor-destaque) 12%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--cor-destaque) 28%, var(--borda));
+  border-radius: 6px;
+  color: var(--cor-destaque);
+  font-size: 12px;
+  justify-self: start;
+  padding: 3px 6px;
 }
 
 .ar-side {
@@ -964,7 +998,9 @@ body.dark .brand h1 {
 }
 
 .ar-selection div,
-.ar-result article {
+.ar-result article,
+.ar-budget-product,
+.ar-budget-values div {
   background: var(--fundo);
   border: 1px solid var(--borda);
   border-radius: 8px;
@@ -985,6 +1021,80 @@ body.dark .brand h1 {
 .ar-result {
   display: grid;
   gap: 8px;
+}
+
+.ar-result h3 {
+  font-size: 15px;
+  margin: 4px 0 0;
+}
+
+.ar-partner-details {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0 0;
+}
+
+.ar-partner-details div {
+  display: grid;
+  gap: 2px;
+  grid-template-columns: 110px minmax(0, 1fr);
+  padding: 0;
+}
+
+.ar-partner-details dt {
+  color: var(--texto-suave);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ar-partner-details dd {
+  color: var(--texto);
+  font-size: 12px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ar-budget {
+  display: grid;
+  gap: 8px;
+}
+
+.ar-budget span {
+  color: var(--texto-suave);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ar-budget-product strong {
+  font-size: 13px;
+}
+
+.ar-budget-product small {
+  color: var(--texto-suave);
+  font-size: 12px;
+}
+
+.ar-budget-values {
+  display: grid;
+  gap: 7px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ar-budget-values strong {
+  font-size: 13px;
+}
+
+.ar-budget-values .discount strong {
+  color: #DC2626;
+}
+
+.ar-budget-values .economy {
+  background: color-mix(in srgb, var(--cor-destaque) 15%, var(--card));
+  border-color: color-mix(in srgb, var(--cor-destaque) 35%, var(--borda));
+}
+
+.ar-budget-values .economy strong {
+  color: var(--cor-destaque);
 }
 
 .ar-audit-row {
@@ -1131,6 +1241,8 @@ body.dark .brand h1 {
   .links-list,
   .ar-generator,
   .ar-toolbar,
+  .ar-search-grid,
+  .ar-budget-values,
   .password-list,
   .password-row,
   .modal-inline-grid,
