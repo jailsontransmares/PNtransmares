@@ -1964,6 +1964,9 @@ function renderSugestoesParceirosAr() {
 
 function atualizarSugestoesProdutoDomAr(chave) {
   const box = document.getElementById(`ar_sugestoes_produto_${chave}`);
+  document.querySelectorAll('.ar-mvp-fields .ar-autocomplete-wrap').forEach(item => {
+    item.classList.remove('is-active');
+  });
 
   if (!box) {
     return;
@@ -1976,6 +1979,7 @@ function atualizarSugestoesProdutoDomAr(chave) {
   }
 
   const valores = obterSugestoesProdutoCampoAr(chave);
+  box.closest('.ar-autocomplete-wrap')?.classList.add('is-active');
   box.hidden = false;
   box.innerHTML = valores.length
     ? valores.map(valor => `
@@ -2000,6 +2004,7 @@ function atualizarSugestoesParceiroDomAr() {
   }
 
   const parceiros = parceirosFiltradosAr();
+  box.closest('.ar-autocomplete-wrap')?.classList.add('is-active');
   box.hidden = false;
   box.innerHTML = parceiros.length
     ? parceiros.map(parceiro => `
@@ -2169,17 +2174,11 @@ function campoProdutoCombinaAr(valor, filtro) {
 }
 
 function alterarFiltroProdutoAr(chave, valor) {
-  const produtoAnterior = state.ar.produtoId;
   state.ar.campoProdutoAtivo = chave;
   state.ar.filtros[chave] = valor;
-  selecionarProdutoPorFiltrosAr();
+  state.ar.produtoId = '';
   state.ar.resultado = null;
   state.ar.alertas = [];
-
-  if (produtoAnterior !== state.ar.produtoId) {
-    renderPainelAr();
-    return;
-  }
 
   atualizarSugestoesProdutoDomAr(chave);
   atualizarEstadoBotaoGerarAr();
@@ -2192,10 +2191,27 @@ function ativarCampoProdutoAr(chave) {
 
 function selecionarSugestaoProdutoAr(chave, valor) {
   state.ar.filtros[chave] = valor;
-  state.ar.campoProdutoAtivo = '';
+  const box = document.getElementById(`ar_sugestoes_produto_${chave}`);
+  const input = box?.closest('.ar-autocomplete-wrap')?.querySelector('input');
+
+  if (input) {
+    input.value = valor;
+  }
+
   selecionarProdutoPorFiltrosAr();
   state.ar.resultado = null;
   state.ar.alertas = [];
+
+  if (!state.ar.produtoId) {
+    if (box) {
+      box.hidden = false;
+      box.innerHTML = '<p>Complete os outros campos para identificar o produto.</p>';
+    }
+    atualizarEstadoBotaoGerarAr();
+    return;
+  }
+
+  state.ar.campoProdutoAtivo = '';
   renderPainelAr();
 }
 
