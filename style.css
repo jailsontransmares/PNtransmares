@@ -812,16 +812,21 @@ body.dark .brand h1 {
   font-size: 13px;
 }
 
-.ar-layout {
+.ar-generator {
   align-items: start;
   display: grid;
   gap: 14px;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) 340px;
 }
 
-.ar-products,
+.ar-step,
 .ar-side {
   min-width: 0;
+}
+
+.ar-step h3 {
+  font-size: 16px;
+  margin: 0 0 8px;
 }
 
 .ar-toolbar {
@@ -841,6 +846,8 @@ body.dark .brand h1 {
 .ar-table {
   display: grid;
   gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 4px;
 }
 
 .ar-table-head,
@@ -848,6 +855,7 @@ body.dark .brand h1 {
   display: grid;
   gap: 8px;
   grid-template-columns: minmax(220px, 1.6fr) 70px 80px 80px 80px 90px 90px 80px 90px;
+  min-width: 920px;
 }
 
 .ar-table-head {
@@ -892,6 +900,41 @@ body.dark .brand h1 {
   display: block;
   font-style: normal;
   margin-top: 2px;
+}
+
+.ar-product-options {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ar-product-option {
+  background: var(--card);
+  border: 1px solid var(--borda);
+  border-left: 4px solid transparent;
+  border-radius: 8px;
+  color: var(--texto);
+  cursor: pointer;
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  text-align: left;
+}
+
+.ar-product-option:hover,
+.ar-product-option.selected {
+  border-color: var(--cor-principal);
+  border-left-color: var(--cor-principal);
+}
+
+.ar-product-option strong {
+  font-size: 13px;
+}
+
+.ar-product-option span,
+.ar-product-option small {
+  color: var(--texto-suave);
+  font-size: 12px;
 }
 
 .ar-side {
@@ -946,6 +989,11 @@ body.dark .brand h1 {
 
 .ar-audit-row {
   grid-template-columns: 120px 1fr minmax(140px, 0.7fr) 80px minmax(180px, 1fr);
+}
+
+.config-textarea {
+  min-height: 74px;
+  resize: vertical;
 }
 
 .modal-inline-grid {
@@ -1081,7 +1129,7 @@ body.dark .brand h1 {
 
   .links-toolbar,
   .links-list,
-  .ar-layout,
+  .ar-generator,
   .ar-toolbar,
   .password-list,
   .password-row,
@@ -1090,6 +1138,11 @@ body.dark .brand h1 {
   .ar-table-head,
   .ar-row {
     grid-template-columns: 1fr;
+  }
+
+  .ar-table-head,
+  .ar-row {
+    min-width: 0;
   }
 
   .ar-table-head {
