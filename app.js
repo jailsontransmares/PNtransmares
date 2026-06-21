@@ -68,29 +68,30 @@ const state = {
     message: ''
   },
   ar: {
-    produtos: [],
-    parceiros: [],
-    historico: [],
-    busca: '',
-    filtros: {
-      ac: '',
-      produto: '',
-      midia: '',
-      modelo: '',
-      validade: ''
-    },
-    produtoId: '',
-    parceiroId: '',
-    parceiroBusca: '',
-    resultado: null,
-    alertas: [],
-    aba: 'gerar',
-    renderTimer: null,
-    campoProdutoAtivo: '',
-    loading: false,
-    gerando: false,
-    message: ''
+  produtos: [],
+  parceiros: [],
+  historico: [],
+  busca: '',
+  produtoBusca: '',
+  filtros: {
+    ac: '',
+    produto: '',
+    midia: '',
+    modelo: '',
+    validade: ''
   },
+  produtoId: '',
+  parceiroId: '',
+  parceiroBusca: '',
+  resultado: null,
+  alertas: [],
+  aba: 'gerar',
+  renderTimer: null,
+  campoProdutoAtivo: '',
+  loading: false,
+  gerando: false,
+  message: ''
+},
   temaAtual: 'claro'
 };
 
@@ -1641,32 +1642,191 @@ function renderConteudoAr(gestor) {
 
 function renderGeradorLinksAr() {
   return `
-    <div class="ar-mvp">
-      <section class="ar-mvp-partner">
-        ${renderPainelParceiroMvpAr()}
-      </section>
+    <section class="ar-mvp-shell">
+      <div class="ar-mvp-hero">
+        <div>
+          <span class="ar-eyebrow">Painel AR</span>
+          <h2>Gerar links</h2>
+          <p>Busque o produto, confira o orçamento, selecione o parceiro e gere os links de atendimento.</p>
+        </div>
+      </div>
 
-      <section class="ar-mvp-product">
-        ${renderPainelProdutoMvpAr()}
-      </section>
+      <div class="ar-flow">
+        <section class="ar-flow-card">
+          <div class="ar-flow-card-header">
+            <span class="ar-step-number">1</span>
+            <div>
+              <h3>Produto</h3>
+              <p>Selecione o certificado digital desejado.</p>
+            </div>
+          </div>
+
+          ${renderPainelProdutoMvpAr()}
+        </section>
+
+        <section class="ar-flow-card">
+          <div class="ar-flow-card-header">
+            <span class="ar-step-number">2</span>
+            <div>
+              <h3>Orçamento</h3>
+              <p>Confira os valores antes de gerar os links.</p>
+            </div>
+          </div>
+
+          ${renderOrcamentoAr()}
+        </section>
+
+        <section class="ar-flow-card">
+          <div class="ar-flow-card-header">
+            <span class="ar-step-number">3</span>
+            <div>
+              <h3>Parceiro</h3>
+              <p>Selecione o parceiro responsável pelo atendimento.</p>
+            </div>
+          </div>
+
+          ${renderPainelParceiroMvpAr()}
+        </section>
+
+        <section class="ar-flow-card">
+          <div class="ar-flow-card-header">
+            <span class="ar-step-number">4</span>
+            <div>
+              <h3>Links</h3>
+              <p>Gere, abra ou copie os links finais.</p>
+            </div>
+          </div>
+
+          ${renderAcaoGerarLinksAr()}
+          ${renderResultadoAr()}
+        </section>
+      </div>
+    </section>
+  `;
+}
+function renderAcaoGerarLinksAr() {
+  const produto = produtoSelecionadoAr();
+  const parceiro = parceiroSelecionadoAr();
+  const podeGerar = produto && parceiro && !state.ar.gerando;
+
+  return `
+    <div class="ar-action-box">
+      <button 
+        class="save-btn ar-generate-main-btn" 
+        type="button" 
+        onclick="gerarLinksAr()" 
+        ${podeGerar ? '' : 'disabled'}>
+        ${state.ar.gerando ? 'Gerando links...' : 'Gerar links'}
+      </button>
+
+      ${!produto || !parceiro ? `
+        <p class="ar-action-hint">
+          Selecione um produto e um parceiro para liberar a geração dos links.
+        </p>
+      ` : ''}
     </div>
   `;
 }
 
 function renderPainelParceiroMvpAr() {
-  const parceiro = obterParceiroSelecionadoAr();
+  const parceiro = parceiroSelecionadoAr();
 
   return `
-    <div class="ar-mvp-card-title">Parceiro</div>
-    <div class="ar-mvp-line ar-autocomplete-wrap">
-      <label>Nome do Parceiro</label>
-      <div>
-        <input class="ar-mvp-input" type="search" value="${escapeAttr(state.ar.parceiroBusca)}" placeholder="Digite o nome do parceiro" oninput="alterarBuscaParceiroAr(this.value)" autocomplete="off">
-        <div id="ar_sugestoes_parceiros" class="ar-suggestions" hidden></div>
+    <div class="ar-mvp-card ar-partner-search-card">
+      <div class="ar-mvp-card-header">
+        <div>
+          <span class="ar-mini-label">Parceiro</span>
+          <h3>Buscar parceiro</h3>
+          <p>Digite o nome, código, empresa, e-mail ou WhatsApp do parceiro.</p>
+        </div>
       </div>
+
+      <label class="ar-autocomplete-wrap ar-partner-search-wrap">
+        <span>Nome do parceiro</span>
+        <div class="ar-autocomplete-field">
+          <input
+            id="ar_parceiro_busca"
+            class="ar-mvp-input"
+            type="search"
+            value="${escapeAttr(state.ar.parceiroBusca || '')}"
+            placeholder="Digite o nome do parceiro"
+            oninput="alterarBuscaParceiroAr(this.value)"
+            autocomplete="off">
+
+          <div id="ar_sugestoes_parceiros" class="ar-suggestions ar-partner-suggestions" hidden></div>
+        </div>
+      </label>
+
+      ${parceiro ? renderParceiroSelecionadoCardAr(parceiro) : `
+        <div class="ar-empty-state compact">
+          <strong>Nenhum parceiro selecionado</strong>
+          <p>Use o campo acima para localizar e selecionar o parceiro.</p>
+        </div>
+      `}
     </div>
-    ${parceiro ? renderParceiroSelecionadoAr(parceiro) : ''}
   `;
+}
+function renderParceiroSelecionadoCardAr(parceiro) {
+  const nome = parceiro.nome_completo || parceiro.nome || 'Parceiro';
+  const empresa = parceiro.nome_empresa || parceiro.empresa || parceiro.escritorio || '';
+  const status = parceiro.status || '';
+  const codigo = parceiro.codigo_revendedor || parceiro.codigo || '';
+  const email = parceiro.email_cadastro_certificado || parceiro.email_comercial || parceiro.email || '';
+  const whatsappPessoal = parceiro.whatsapp_pessoal || parceiro.whatsapp || '';
+  const whatsappComercial = parceiro.whatsapp_comercial || '';
+
+  return `
+    <article class="ar-partner-card-modern">
+      <div class="ar-partner-main">
+        <div class="ar-partner-avatar">
+          ${escapeHtml(obterIniciaisAr(nome))}
+        </div>
+
+        <div>
+          <span class="ar-mini-label">Parceiro selecionado</span>
+          <h4>${escapeHtml(nome)}</h4>
+          ${empresa ? `<p>${escapeHtml(empresa)}</p>` : ''}
+        </div>
+      </div>
+
+      <div class="ar-partner-tags">
+        ${codigo ? `<span>Código: ${escapeHtml(codigo)}</span>` : ''}
+        ${status ? `<span>Status: ${escapeHtml(status)}</span>` : ''}
+      </div>
+
+      <div class="ar-partner-contact-grid">
+        ${email ? `
+          <div>
+            <span>E-mail cadastro</span>
+            <strong>${escapeHtml(email)}</strong>
+          </div>
+        ` : ''}
+
+        ${whatsappPessoal ? `
+          <div>
+            <span>WhatsApp pessoal</span>
+            <strong>${escapeHtml(whatsappPessoal)}</strong>
+          </div>
+        ` : ''}
+
+        ${whatsappComercial ? `
+          <div>
+            <span>WhatsApp comercial</span>
+            <strong>${escapeHtml(whatsappComercial)}</strong>
+          </div>
+        ` : ''}
+      </div>
+    </article>
+  `;
+}
+function obterIniciaisAr(nome) {
+  return String(nome || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(parte => parte.charAt(0).toUpperCase())
+    .join('') || 'AR';
 }
 
 function renderLinhaParceiroMvpAr(rotulo, valor) {
@@ -1717,25 +1877,168 @@ function renderParceiroSelecionadoAr(parceiro) {
 }
 
 function renderPainelProdutoMvpAr() {
-  const produto = obterProdutoSelecionadoAr();
+  const produto = produtoSelecionadoAr();
 
   return `
-    <div class="ar-mvp-card-title">Produto</div>
-    <div class="ar-mvp-fields">
-      ${renderCampoProdutoMvpAr('AC para compra', 'ac')}
-      ${renderCampoProdutoMvpAr('Produto desejado', 'produto')}
-      ${renderCampoProdutoMvpAr('Mídia', 'midia')}
-      ${renderCampoProdutoMvpAr('Modelo', 'modelo')}
-      ${renderCampoProdutoMvpAr('Validade', 'validade')}
+    <div class="ar-mvp-card ar-product-card">
+      <div class="ar-mvp-card-header">
+        <div>
+          <span class="ar-mini-label">Produto</span>
+          <h3>Buscar certificado digital</h3>
+          <p>Digite parte do produto, modelo, validade, mídia ou AC para localizar rapidamente.</p>
+        </div>
+      </div>
+
+      ${renderBuscaProdutoUnicaAr()}
+
+      ${produto ? renderProdutoSelecionadoResumoAr(produto) : `
+        <div class="ar-empty-state compact">
+          <strong>Nenhum produto selecionado</strong>
+          <p>Use o campo acima para buscar e selecionar um certificado.</p>
+        </div>
+      `}
     </div>
-    ${renderResumoProdutoMvpAr(produto)}
-    ${renderOrcamentoAr()}
-    <div class="ar-mvp-actions">
-      <button id="ar_gerar_btn" class="save-btn saving-btn ${state.ar.gerando ? 'is-saving' : ''}" type="button" onclick="gerarLinksAr()" ${state.ar.gerando || !state.ar.produtoId || !state.ar.parceiroId ? 'disabled' : ''}>${state.ar.gerando ? 'Gerando...' : 'Gerar links'}</button>
-    </div>
-    ${renderResultadoAr()}
   `;
 }
+function renderBuscaProdutoUnicaAr() {
+  return `
+    <label class="ar-autocomplete-wrap ar-product-search-wrap">
+      <span>Produto desejado</span>
+      <div class="ar-autocomplete-field">
+        <input
+          id="ar_produto_busca"
+          class="ar-mvp-input"
+          type="search"
+          value="${escapeAttr(state.ar.produtoBusca || '')}"
+          placeholder="Ex.: e-CPF A1, cartão, 12 meses, Soluti..."
+          oninput="alterarBuscaProdutoAr(this.value)"
+          autocomplete="off">
+
+        <div id="ar_sugestoes_produtos" class="ar-suggestions ar-product-suggestions" hidden></div>
+      </div>
+    </label>
+  `;
+}
+function renderProdutoSelecionadoResumoAr(produto) {
+  const economia = formatarEconomiaProdutoAr(produto);
+
+  return `
+    <article class="ar-selected-product">
+      <div>
+        <span class="ar-mini-label">Produto selecionado</span>
+        <h4>${escapeHtml(produto.descricao_comercial || produto.produto || 'Certificado digital')}</h4>
+        <p>
+          ${escapeHtml(produto.modelo || 'Modelo não informado')}
+          ${produto.validade ? ` · Validade: ${escapeHtml(produto.validade)}` : ''}
+        </p>
+      </div>
+
+      <div class="ar-selected-product-meta">
+        ${produto.ac ? `<span>AC: ${escapeHtml(produto.ac)}</span>` : ''}
+        ${produto.midia ? `<span>Mídia: ${escapeHtml(produto.midia)}</span>` : ''}
+        ${produto.preco_com_desconto ? `<span>Com desconto: ${escapeHtml(formatarMoedaProdutoAr(produto.preco_com_desconto))}</span>` : ''}
+        ${produto.preco_sem_desconto ? `<span>Sem desconto: ${escapeHtml(formatarMoedaProdutoAr(produto.preco_sem_desconto))}</span>` : ''}
+        ${economia ? `<strong>Economia: ${escapeHtml(economia)}</strong>` : ''}
+      </div>
+    </article>
+  `;
+}
+function alterarBuscaProdutoAr(valor) {
+  state.ar.produtoBusca = valor;
+  state.ar.produtoId = '';
+  state.ar.resultado = null;
+  state.ar.alertas = [];
+
+  atualizarEstadoBotaoGerarAr();
+  atualizarSugestoesProdutoUnicoDomAr();
+}
+function atualizarSugestoesProdutoUnicoDomAr() {
+  const box = document.getElementById('ar_sugestoes_produtos');
+
+  if (!box) return;
+
+  const produtos = produtosFiltradosBuscaUnicaAr();
+
+  if (!state.ar.produtoBusca || !produtos.length) {
+    box.hidden = true;
+    box.innerHTML = '';
+    return;
+  }
+function produtosFiltradosBuscaUnicaAr() {
+  const busca = normalizarBuscaAr(state.ar.produtoBusca || '');
+
+  if (!busca) return [];
+
+  const termos = busca.split(' ').filter(Boolean);
+
+  return state.ar.produtos.filter(produto => {
+    const texto = normalizarBuscaAr([
+      produto.id,
+      produto.descricao_comercial,
+      produto.produto,
+      produto.product_id,
+      produto.ac,
+      produto.tipo_certificado,
+      produto.midia,
+      produto.modelo,
+      produto.validade,
+      produto.grupo,
+      produto.codigo_grupo,
+      produto.grupo_com_desconto,
+      produto.grupo_sem_desconto,
+      produto.termos_busca,
+      produto.preco_com_desconto,
+      produto.preco_sem_desconto
+    ].join(' '));
+
+    return termos.every(termo => texto.includes(termo));
+  }).slice(0, 10);
+}
+function selecionarProdutoCompletoAr(id) {
+  const produto = state.ar.produtos.find(item => item.id === id);
+
+  if (!produto) return;
+
+  state.ar.produtoId = id;
+  state.ar.produtoBusca = [
+    produto.descricao_comercial || produto.produto,
+    produto.modelo,
+    produto.validade
+  ].filter(Boolean).join(' | ');
+
+  state.ar.resultado = null;
+  state.ar.alertas = [];
+
+  renderPainelAr();
+}
+  box.hidden = false;
+  box.innerHTML = produtos.map(produto => {
+    const economia = formatarEconomiaProdutoAr(produto);
+
+    return `
+      <button type="button" onclick="selecionarProdutoCompletoAr('${escapeAttr(produto.id)}')">
+        <strong>${escapeHtml(produto.descricao_comercial || produto.produto || 'Certificado digital')}</strong>
+
+        <span>
+          ${escapeHtml(produto.modelo || 'Modelo não informado')}
+          ${produto.validade ? ` · <b class="ar-validity-pill">Validade: ${escapeHtml(produto.validade)}</b>` : ''}
+        </span>
+
+        <small>
+          ${produto.ac ? `AC: ${escapeHtml(produto.ac)}` : ''}
+          ${produto.midia ? ` · Mídia: ${escapeHtml(produto.midia)}` : ''}
+        </small>
+
+        <small>
+          ${produto.preco_com_desconto ? `Com desconto: ${escapeHtml(formatarMoedaProdutoAr(produto.preco_com_desconto))}` : ''}
+          ${produto.preco_sem_desconto ? ` · Sem desconto: ${escapeHtml(formatarMoedaProdutoAr(produto.preco_sem_desconto))}` : ''}
+          ${economia ? ` · Economia: ${escapeHtml(economia)}` : ''}
+        </small>
+      </button>
+    `;
+  }).join('');
+}
+
 
 function renderCampoProdutoMvpAr(rotulo, chave) {
   return `
@@ -1916,26 +2219,33 @@ function obterSugestoesProdutoCampoAr(chave) {
 }
 
 function parceirosFiltradosAr() {
-  const termo = normalizarBuscaAr(state.ar.parceiroBusca);
+  const busca = normalizarBuscaAr(state.ar.parceiroBusca || '');
 
-  if (!termo) {
-    return state.ar.parceiros.slice(0, 6);
-  }
+  if (!busca) return [];
+
+  const termos = busca.split(' ').filter(Boolean);
 
   return state.ar.parceiros.filter(parceiro => {
     const texto = normalizarBuscaAr([
+      parceiro.id,
       parceiro.nome,
       parceiro.nome_completo,
       parceiro.nome_empresa,
-      parceiro.cnpj_empresa,
+      parceiro.empresa,
+      parceiro.escritorio,
+      parceiro.cnpj,
       parceiro.codigo_revendedor,
+      parceiro.codigo,
       parceiro.status,
       parceiro.email_cadastro_certificado,
       parceiro.email_comercial,
-      parceiro.observacoes
+      parceiro.email,
+      parceiro.whatsapp,
+      parceiro.whatsapp_pessoal,
+      parceiro.whatsapp_comercial
     ].join(' '));
 
-    return texto.indexOf(termo) >= 0;
+    return termos.every(termo => texto.includes(termo));
   }).slice(0, 8);
 }
 
@@ -2084,51 +2394,202 @@ function renderDetalhesParceiroAr(parceiro) {
 }
 
 function renderOrcamentoAr() {
-  const produto = obterProdutoSelecionadoAr();
-  const parceiro = obterParceiroSelecionadoAr();
+  const produto = produtoSelecionadoAr();
 
-  if (!produto || !parceiro) {
-    return '';
+  if (!produto) {
+    return `
+      <div class="ar-empty-state">
+        <strong>Nenhum produto selecionado</strong>
+        <p>Busque e selecione um produto para visualizar o orçamento.</p>
+      </div>
+    `;
   }
 
+  const texto = montarTextoOrcamentoAr(produto);
   const economia = formatarEconomiaProdutoAr(produto);
+  const precoComDesconto = formatarMoedaProdutoAr(produto.preco_com_desconto);
+  const precoSemDesconto = formatarMoedaProdutoAr(produto.preco_sem_desconto);
 
   return `
-    <div class="ar-budget">
-      <div class="ar-mvp-price discount"><strong>${escapeHtml(formatarMoedaProdutoAr(produto.preco_com_desconto))}</strong><span>Com desconto:</span></div>
-      <div class="ar-mvp-price full"><strong>${escapeHtml(formatarMoedaProdutoAr(produto.preco_sem_desconto))}</strong><span>SEM desconto:</span></div>
-      <div class="ar-mvp-price economy"><strong>${escapeHtml(economia)}</strong><span>Economia:</span></div>
-      <button id="ar_copy_orcamento" class="link-sub-btn" type="button" onclick="copiarOrcamentoAr()">Copiar orçamento</button>
-    </div>
+    <article class="ar-budget-card">
+      <div class="ar-budget-top">
+        <div>
+          <span class="ar-mini-label">Orçamento do certificado digital</span>
+          <h3>${escapeHtml(produto.descricao_comercial || produto.produto || 'Certificado digital')}</h3>
+          <p>
+            ${escapeHtml(produto.modelo || 'Modelo não informado')}
+            ${produto.validade ? ` · Validade: ${escapeHtml(produto.validade)}` : ''}
+          </p>
+        </div>
+
+        ${produto.validade ? `
+          <span class="ar-budget-validity">
+            ${escapeHtml(produto.validade)}
+          </span>
+        ` : ''}
+      </div>
+
+      <div class="ar-budget-values">
+        <div class="ar-budget-value primary">
+          <span>Com desconto</span>
+          <strong>${escapeHtml(precoComDesconto)}</strong>
+        </div>
+
+        <div class="ar-budget-value">
+          <span>Sem desconto</span>
+          <strong>${escapeHtml(precoSemDesconto)}</strong>
+        </div>
+
+        <div class="ar-budget-value economy">
+          <span>Economia</span>
+          <strong>${escapeHtml(economia)}</strong>
+        </div>
+      </div>
+
+      <div class="ar-whatsapp-preview">
+        <span>Prévia para WhatsApp</span>
+        <pre>${escapeHtml(texto)}</pre>
+      </div>
+
+      <button 
+        id="ar_copiar_orcamento" 
+        class="secondary-btn ar-copy-budget-btn" 
+        type="button" 
+        onclick="copiarOrcamentoAr()">
+        Copiar orçamento
+      </button>
+    </article>
   `;
 }
 
 function renderResultadoAr() {
-  if (!state.ar.resultado) {
-    return '';
+  const resultado = state.ar.resultado;
+
+  if (!resultado) {
+    return `
+      <div class="ar-empty-state">
+        <strong>Nenhum link gerado ainda</strong>
+        <p>Depois de selecionar produto e parceiro, clique em gerar links para visualizar o resultado.</p>
+      </div>
+    `;
   }
-  const links = obterLinksResultadoAr();
+
+  const links = normalizarLinksResultadoAr(resultado);
+
+  if (!links.length) {
+    return `
+      <div class="ar-empty-state">
+        <strong>Links não encontrados</strong>
+        <p>A API retornou uma resposta, mas nenhum link válido foi identificado.</p>
+      </div>
+    `;
+  }
 
   return `
-    <div class="ar-result">
-      <h3>Links gerados</h3>
-      ${state.ar.alertas.length ? `<p class="field-error">${escapeHtml(state.ar.alertas.join(' '))}</p>` : ''}
-      <article>
-        <span>Link com desconto</span>
-        <div class="link-buttons">
-          <a class="link-sub-btn" href="${escapeAttr(links.com_desconto)}" target="_blank" rel="noopener">Abrir</a>
-          <button id="ar_copy_com" class="link-sub-btn" type="button" onclick="copiarTextoAr('ar_copy_com', '${escapeAttr(links.com_desconto)}', 'Copiar')">Copiar</button>
+    <section class="ar-generated-links">
+      <div class="ar-generated-links-header">
+        <div>
+          <span class="ar-mini-label">Resultado</span>
+          <h3>Links gerados</h3>
+          <p>Use os botões abaixo para abrir ou copiar cada link.</p>
         </div>
-      </article>
-      <article>
-        <span>Link sem desconto</span>
-        <div class="link-buttons">
-          <a class="link-sub-btn" href="${escapeAttr(links.sem_desconto)}" target="_blank" rel="noopener">Abrir</a>
-          <button id="ar_copy_sem" class="link-sub-btn" type="button" onclick="copiarTextoAr('ar_copy_sem', '${escapeAttr(links.sem_desconto)}', 'Copiar')">Copiar</button>
-        </div>
-      </article>
-    </div>
+      </div>
+
+      <div class="ar-generated-links-list">
+        ${links.map(link => `
+          <article class="ar-generated-link-card">
+            <div class="ar-generated-link-info">
+              <span>${escapeHtml(link.rotulo)}</span>
+              <strong>${escapeHtml(link.titulo)}</strong>
+              <small>${escapeHtml(link.url)}</small>
+            </div>
+
+            <div class="ar-generated-link-actions">
+              <a 
+                class="link-sub-btn" 
+                href="${escapeAttr(link.url)}" 
+                target="_blank" 
+                rel="noopener">
+                Abrir
+              </a>
+
+              <button 
+                id="ar_copy_result_${escapeAttr(link.id)}"
+                class="link-sub-btn" 
+                type="button" 
+                onclick="copiarLinkResultadoAr('${escapeAttr(link.id)}', '${escapeAttr(link.url)}')">
+                Copiar
+              </button>
+            </div>
+          </article>
+        `).join('')}
+      </div>
+    </section>
   `;
+}
+function normalizarLinksResultadoAr(resultado) {
+  const links = [];
+
+  if (resultado.link_com_desconto) {
+    links.push({
+      id: 'com_desconto',
+      rotulo: 'Com desconto',
+      titulo: 'Link comercial com desconto',
+      url: resultado.link_com_desconto
+    });
+  }
+
+  if (resultado.link_sem_desconto) {
+    links.push({
+      id: 'sem_desconto',
+      rotulo: 'Sem desconto',
+      titulo: 'Link comercial sem desconto',
+      url: resultado.link_sem_desconto
+    });
+  }
+
+  if (Array.isArray(resultado.links)) {
+    resultado.links.forEach((item, index) => {
+      const url = item.url || item.link || '';
+
+      if (!url) return;
+
+      links.push({
+        id: item.id || `extra_${index}`,
+        rotulo: item.rotulo || item.tipo || `Link ${index + 1}`,
+        titulo: item.titulo || item.nome || item.rotulo || `Link ${index + 1}`,
+        url
+      });
+    });
+  }
+
+  return links;
+}
+
+async function copiarLinkResultadoAr(id, url) {
+  const botao = document.getElementById(`ar_copy_result_${id}`);
+
+  try {
+    await navigator.clipboard.writeText(url);
+
+    if (botao) {
+      botao.textContent = 'Copiado';
+      botao.classList.add('copied');
+
+      window.setTimeout(() => {
+        botao.textContent = 'Copiar';
+        botao.classList.remove('copied');
+      }, 1400);
+    }
+  } catch (erro) {
+    if (botao) {
+      botao.textContent = 'Erro';
+
+      window.setTimeout(() => {
+        botao.textContent = 'Copiar';
+      }, 1400);
+    }
+  }
 }
 
 function obterLinksResultadoAr() {
