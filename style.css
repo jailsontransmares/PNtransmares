@@ -512,10 +512,15 @@ body.dark .module-card {
 
 .admin-tabs,
 .admin-panel {
-  background: var(--card);
-  border: 1px solid var(--borda);
-  border-radius: 8px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.94);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.90), var(--glass-blue-bg)),
+    var(--surface-glass-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .admin-tabs {
@@ -528,22 +533,23 @@ body.dark .module-card {
 .admin-tab {
   background: transparent;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-button-secondary);
   color: var(--texto-suave);
   cursor: pointer;
   font-size: 14px;
   padding: 10px 12px;
   text-align: left;
+  transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
 }
 
 .admin-tab.active {
-  background: var(--fundo);
-  color: var(--texto);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
   font-weight: 700;
 }
 
 .admin-panel {
-  padding: 14px;
+  padding: 18px;
 }
 
 .admin-panel-header {
@@ -551,11 +557,13 @@ body.dark .module-card {
   display: flex;
   gap: 16px;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .admin-panel-header h2 {
-  font-size: 20px;
+  color: var(--color-navy);
+  font-size: 22px;
+  font-weight: 800;
   margin: 0;
 }
 
@@ -566,12 +574,12 @@ body.dark .module-card {
 }
 
 .admin-message {
-  background: color-mix(in srgb, var(--cor-destaque) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--cor-destaque) 30%, var(--borda));
-  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--surface-glass-strong));
+  border: var(--glass-border-subtle);
+  border-radius: var(--radius-card-compact);
   color: var(--texto);
   margin: 0 0 14px;
-  padding: 10px 12px;
+  padding: 12px 14px;
 }
 
 .config-groups {
@@ -638,16 +646,24 @@ body.dark .module-card {
 }
 
 .config-input {
-  background: var(--fundo);
-  border: 1px solid var(--borda);
-  border-radius: 8px;
+  background: var(--color-surface-muted);
+  border: var(--border-subtle);
+  border-radius: var(--radius-input);
   color: var(--texto);
   font: inherit;
   font-size: 13px;
-  min-height: 34px;
+  min-height: 38px;
   min-width: 0;
-  padding: 6px 8px;
+  padding: 8px 10px;
+  transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
   width: 100%;
+}
+
+.config-input:focus {
+  background: var(--card);
+  border-color: color-mix(in srgb, var(--color-primary) 42%, var(--borda));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
+  outline: 0;
 }
 
 .color-input {
@@ -670,8 +686,8 @@ body.dark .module-card {
 }
 
 .filter-btn {
-  background: var(--fundo);
-  border: 1px solid var(--borda);
+  background: var(--color-surface-muted);
+  border: var(--border-subtle);
   border-radius: 999px;
   color: var(--texto-suave);
   cursor: pointer;
@@ -681,21 +697,29 @@ body.dark .module-card {
 }
 
 .filter-btn.active {
-  border-color: var(--cor-principal);
-  color: var(--cor-principal);
+  background: var(--color-primary-soft);
+  border-color: color-mix(in srgb, var(--color-primary) 30%, var(--borda));
+  color: var(--color-primary);
   font-weight: 700;
 }
 
 .add-small-btn {
-  background: var(--cor-principal);
-  border: 1px solid var(--cor-principal);
-  border-radius: 8px;
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-button-primary);
   color: white;
   cursor: pointer;
   font-size: 13px;
   margin: 0 0 12px;
-  min-height: 32px;
-  padding: 6px 10px;
+  min-height: 38px;
+  padding: 8px 14px;
+  transition: background var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.add-small-btn:hover {
+  background: var(--color-primary-dark);
+  box-shadow: var(--shadow-card);
+  transform: translateY(-1px);
 }
 
 .crud-list {
@@ -738,9 +762,9 @@ body.dark .module-card {
 
 .icon-btn {
   align-items: center;
-  background: var(--fundo);
-  border: 1px solid var(--borda);
-  border-radius: 8px;
+  background: var(--color-surface-muted);
+  border: var(--border-subtle);
+  border-radius: var(--radius-button-secondary);
   color: var(--texto);
   cursor: pointer;
   display: inline-flex;
@@ -752,13 +776,15 @@ body.dark .module-card {
 }
 
 .icon-btn:hover {
-  border-color: var(--cor-principal);
-  color: var(--cor-principal);
+  border-color: color-mix(in srgb, var(--color-primary) 34%, var(--borda));
+  color: var(--color-primary);
 }
 
 .modal-backdrop {
   align-items: center;
-  background: rgba(15, 23, 42, 0.42);
+  background: rgba(15, 23, 42, 0.32);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   inset: 0;
   justify-content: center;
@@ -768,14 +794,16 @@ body.dark .module-card {
 }
 
 .small-modal {
-  background: var(--card);
-  border: 1px solid var(--borda);
-  border-radius: 8px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
+  background: var(--surface-glass-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border-subtle);
+  border-radius: var(--radius-modal);
+  box-shadow: var(--shadow-modal);
   display: grid;
-  gap: 10px;
+  gap: 12px;
   max-width: 420px;
-  padding: 14px;
+  padding: 20px;
   width: min(420px, 100%);
 }
 
@@ -811,15 +839,15 @@ body.dark .module-card {
 .links-toolbar {
   align-items: center;
   display: grid;
-  gap: 8px;
+  gap: 10px;
   grid-template-columns: repeat(3, minmax(150px, 1fr)) auto;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .module-tabs {
-  background: var(--fundo);
-  border: 1px solid var(--borda);
-  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-primary-soft) 46%, var(--surface-glass-strong));
+  border: var(--glass-border-subtle);
+  border-radius: var(--radius-button-primary);
   display: flex;
   gap: 4px;
   padding: 4px;
@@ -828,37 +856,38 @@ body.dark .module-card {
 .module-tabs button {
   background: transparent;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-button-primary);
   color: var(--texto-suave);
   cursor: pointer;
   font-weight: 700;
-  padding: 7px 10px;
+  padding: 8px 12px;
+  transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .module-tabs button.active {
-  background: var(--card);
-  color: var(--cor-principal);
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+  background: var(--surface-glass-strong);
+  color: var(--color-primary);
+  box-shadow: var(--shadow-card);
 }
 
 .module-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: -2px 0 12px;
+  gap: 10px;
+  margin: -4px 0 16px;
 }
 
 .module-stats span {
-  background: var(--fundo);
-  border: 1px solid var(--borda);
-  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-glass-strong) 88%, var(--glass-blue-bg));
+  border: var(--glass-border-subtle);
+  border-radius: var(--radius-chip);
   color: var(--texto-suave);
   font-size: 12px;
-  padding: 6px 8px;
+  padding: 7px 10px;
 }
 
 .module-stats strong {
-  color: var(--texto);
+  color: var(--color-primary);
   font-size: 14px;
 }
 
@@ -924,20 +953,24 @@ body.dark .module-card {
 }
 
 .link-sub-btn {
-  background: var(--card);
-  border: 1px solid var(--borda);
-  border-radius: 8px;
-  color: var(--cor-principal);
+  background: var(--color-primary-soft);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 22%, var(--borda));
+  border-radius: var(--radius-button-primary);
+  color: var(--color-primary);
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
-  min-height: 28px;
-  padding: 5px 8px;
+  min-height: 30px;
+  padding: 6px 10px;
   text-decoration: none;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
 }
 
 .link-sub-btn:hover {
-  border-color: var(--cor-principal);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+  transform: translateY(-1px);
 }
 
 .link-sub-btn.copied {
@@ -954,28 +987,48 @@ body.dark .module-card {
 
 .password-list {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .password-row {
-  border: 1px solid var(--borda);
-  border-bottom: 4px solid var(--cor-destaque);
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), var(--glass-blue-bg)),
+    var(--surface-glass-strong);
+  border: var(--glass-border-subtle);
+  border-left: 4px solid var(--color-success);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 10px 48px 10px 10px;
+  gap: 12px;
+  min-height: 180px;
+  padding: 14px 50px 14px 14px;
   position: relative;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.password-row:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-1px);
 }
 
 .password-row.status-line-inativo {
-  border-bottom-color: #9CA3AF;
+  border-left-color: var(--color-gray);
+  opacity: 0.82;
 }
 
 .password-row h3 {
-  font-size: 14px;
+  color: var(--color-navy);
+  font-size: 15px;
+  font-weight: 800;
   margin: 2px 0;
+}
+
+body.dark .admin-panel-header h2,
+body.dark .password-row h3 {
+  color: #E8EEF9;
 }
 
 .password-row p {
@@ -1003,12 +1056,12 @@ body.dark .module-card {
 }
 
 .password-fields span {
-  background: var(--fundo);
-  border: 1px solid var(--borda);
-  border-radius: 8px;
+  background: var(--color-surface-muted);
+  border: var(--border-subtle);
+  border-radius: var(--radius-button-secondary);
   color: var(--texto);
   font-size: 12px;
-  padding: 6px 8px;
+  padding: 7px 9px;
 }
 
 .audit-list {
@@ -1018,12 +1071,13 @@ body.dark .module-card {
 
 .audit-row {
   align-items: center;
-  border: 1px solid var(--borda);
-  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-glass-strong) 88%, var(--card));
+  border: var(--glass-border-subtle);
+  border-radius: var(--radius-card-compact);
   display: grid;
   gap: 10px;
   grid-template-columns: 120px 1fr 80px 80px minmax(180px, 1fr);
-  padding: 9px 10px;
+  padding: 10px 12px;
 }
 
 .audit-row span,
@@ -1813,7 +1867,7 @@ body.dark .module-card {
 }
 
 .card-taxonomy {
-  color: var(--texto-suave);
+  color: var(--color-primary);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0;
