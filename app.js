@@ -1662,17 +1662,10 @@ function renderPainelParceiroMvpAr() {
       <label>Nome do Parceiro</label>
       <div>
         <input class="ar-mvp-input" type="search" value="${escapeAttr(state.ar.parceiroBusca)}" placeholder="Digite o nome do parceiro" oninput="alterarBuscaParceiroAr(this.value)" autocomplete="off">
-        ${renderSugestoesParceirosAr()}
+        <div id="ar_sugestoes_parceiros" class="ar-suggestions" hidden></div>
       </div>
     </div>
-    ${parceiro ? `
-      ${renderLinhaParceiroMvpAr('Possui vínculo ativo com a empresa/escritório', parceiro.status || 'não informado')}
-      ${renderLinhaParceiroMvpAr('Código do Parceiro', parceiro.codigo_revendedor || 'sem código')}
-      ${renderLinhaParceiroMvpAr('Dt.: aniversário', '')}
-      ${renderLinhaParceiroMvpAr('Telefone1', parceiro.whatsapp_pessoal || '')}
-      ${renderLinhaParceiroMvpAr('Telefone2', parceiro.whatsapp_comercial || '')}
-      ${renderLinhaParceiroMvpAr('E-mail para cadastro', parceiro.email_cadastro_certificado || parceiro.email_comercial || '')}
-    ` : ''}
+    ${parceiro ? renderParceiroSelecionadoAr(parceiro) : ''}
   `;
 }
 
@@ -1682,6 +1675,44 @@ function renderLinhaParceiroMvpAr(rotulo, valor) {
       <label>${escapeHtml(rotulo)}</label>
       <div>${escapeHtml(valor || '')}</div>
     </div>
+  `;
+}
+
+function renderParceiroSelecionadoAr(parceiro) {
+  const contatos = [
+    ['E-mail para cadastro', parceiro.email_cadastro_certificado || parceiro.email_comercial],
+    ['WhatsApp pessoal', parceiro.whatsapp_pessoal],
+    ['WhatsApp comercial', parceiro.whatsapp_comercial],
+    ['Empresa/escritório', parceiro.empresa || parceiro.escritorio || parceiro.nome_empresa]
+  ].filter(([, valor]) => valor);
+  const status = parceiro.status || 'não informado';
+  const statusNormalizado = normalizarBuscaAr(status);
+  const statusAtivo = statusNormalizado === 'ativo' || statusNormalizado === 'sim' || statusNormalizado === 'regular';
+
+  return `
+    <article id="ar_parceiro_card" class="ar-partner-card">
+      <div class="ar-partner-head">
+        <div>
+          <span>Parceiro selecionado</span>
+          <strong>${escapeHtml(parceiro.nome_completo || parceiro.nome || 'Parceiro')}</strong>
+        </div>
+        <em class="${statusAtivo ? 'is-active' : ''}">${escapeHtml(status)}</em>
+      </div>
+      <div class="ar-partner-code">
+        <span>Código do parceiro</span>
+        <strong>${escapeHtml(parceiro.codigo_revendedor || 'sem código')}</strong>
+      </div>
+      ${contatos.length ? `
+        <div class="ar-partner-grid">
+          ${contatos.map(([rotulo, valor]) => `
+            <div>
+              <span>${escapeHtml(rotulo)}</span>
+              <strong>${escapeHtml(valor)}</strong>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    </article>
   `;
 }
 
@@ -1712,7 +1743,7 @@ function renderCampoProdutoMvpAr(rotulo, chave) {
       <span>${escapeHtml(rotulo)}</span>
       <div>
         <input class="ar-mvp-input" type="search" value="${escapeAttr(state.ar.filtros[chave] || '')}" onfocus="ativarCampoProdutoAr('${escapeAttr(chave)}')" oninput="alterarFiltroProdutoAr('${escapeAttr(chave)}', this.value)" autocomplete="off">
-        ${renderSugestoesProdutoCampoAr(chave)}
+        <div id="ar_sugestoes_produto_${escapeAttr(chave)}" class="ar-suggestions" hidden></div>
       </div>
     </label>
   `;
@@ -1931,6 +1962,65 @@ function renderSugestoesParceirosAr() {
   `;
 }
 
+function atualizarSugestoesProdutoDomAr(chave) {
+  const box = document.getElementById(`ar_sugestoes_produto_${chave}`);
+
+  if (!box) {
+    return;
+  }
+
+  if (state.ar.campoProdutoAtivo !== chave || !normalizarBuscaAr(state.ar.filtros[chave])) {
+    box.hidden = true;
+    box.innerHTML = '';
+    return;
+  }
+
+  const valores = obterSugestoesProdutoCampoAr(chave);
+  box.hidden = false;
+  box.innerHTML = valores.length
+    ? valores.map(valor => `
+      <button type="button" onclick="selecionarSugestaoProdutoAr('${escapeAttr(chave)}', '${escapeAttr(valor)}')">
+        <strong>${escapeHtml(valor)}</strong>
+      </button>
+    `).join('')
+    : '<p>Nenhuma correspondência encontrada.</p>';
+}
+
+function atualizarSugestoesParceiroDomAr() {
+  const box = document.getElementById('ar_sugestoes_parceiros');
+
+  if (!box) {
+    return;
+  }
+
+  if (!normalizarBuscaAr(state.ar.parceiroBusca) || state.ar.parceiroId) {
+    box.hidden = true;
+    box.innerHTML = '';
+    return;
+  }
+
+  const parceiros = parceirosFiltradosAr();
+  box.hidden = false;
+  box.innerHTML = parceiros.length
+    ? parceiros.map(parceiro => `
+      <button type="button" onclick="selecionarParceiroAr('${escapeAttr(parceiro.id)}')">
+        <strong>${escapeHtml(parceiro.nome_completo || parceiro.nome || 'Parceiro')}</strong>
+        <span>${escapeHtml([parceiro.codigo_revendedor || 'sem código', parceiro.status || '-'].join(' | '))}</span>
+      </button>
+    `).join('')
+    : '<p>Nenhum parceiro encontrado.</p>';
+}
+
+function atualizarEstadoBotaoGerarAr() {
+  const botao = document.getElementById('ar_gerar_btn');
+
+  if (!botao) {
+    return;
+  }
+
+  botao.disabled = state.ar.gerando || !state.ar.produtoId || !state.ar.parceiroId;
+}
+
 function renderOpcoesParceirosAr() {
   const parceiros = parceirosFiltradosAr();
 
@@ -2079,17 +2169,25 @@ function campoProdutoCombinaAr(valor, filtro) {
 }
 
 function alterarFiltroProdutoAr(chave, valor) {
+  const produtoAnterior = state.ar.produtoId;
   state.ar.campoProdutoAtivo = chave;
   state.ar.filtros[chave] = valor;
   selecionarProdutoPorFiltrosAr();
   state.ar.resultado = null;
   state.ar.alertas = [];
-  agendarRenderPainelAr();
+
+  if (produtoAnterior !== state.ar.produtoId) {
+    renderPainelAr();
+    return;
+  }
+
+  atualizarSugestoesProdutoDomAr(chave);
+  atualizarEstadoBotaoGerarAr();
 }
 
 function ativarCampoProdutoAr(chave) {
   state.ar.campoProdutoAtivo = chave;
-  agendarRenderPainelAr();
+  atualizarSugestoesProdutoDomAr(chave);
 }
 
 function selecionarSugestaoProdutoAr(chave, valor) {
@@ -2106,7 +2204,9 @@ function alterarBuscaParceiroAr(valor) {
   state.ar.parceiroId = '';
   state.ar.resultado = null;
   state.ar.alertas = [];
-  agendarRenderPainelAr();
+  document.getElementById('ar_parceiro_card')?.remove();
+  atualizarEstadoBotaoGerarAr();
+  atualizarSugestoesParceiroDomAr();
 }
 
 function confirmarParceiroDigitadoAr(valor) {
