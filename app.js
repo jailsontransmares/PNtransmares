@@ -480,7 +480,7 @@ function agruparConfiguracoes(configs) {
     {
       id: 'painel_ar',
       titulo: 'Painel AR',
-      chaves: ['ar_produtos_spreadsheet_id', 'ar_produtos_sheet_name', 'ar_link_com_desconto_template', 'ar_link_sem_desconto_template', 'ar_link_templates_json']
+      chaves: ['ar_produtos_spreadsheet_id', 'ar_produtos_sheet_name', 'ar_url_base_padrao', 'ar_link_com_desconto_template', 'ar_link_sem_desconto_template', 'ar_link_templates_json']
     }
   ];
   const porChave = configs.reduce((acc, item) => {
@@ -514,6 +514,7 @@ function obterRotuloConfig(chave) {
     limite_avisos: 'Máximo de avisos',
     ar_produtos_spreadsheet_id: 'Planilha de produtos AR',
     ar_produtos_sheet_name: 'Aba de produtos AR',
+    ar_url_base_padrao: 'URL base padrão',
     ar_link_com_desconto_template: 'Template com desconto',
     ar_link_sem_desconto_template: 'Template sem desconto',
     ar_link_templates_json: 'Templates em lote'
