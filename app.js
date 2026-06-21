@@ -72,8 +72,16 @@ const state = {
     parceiros: [],
     historico: [],
     busca: '',
+    filtros: {
+      ac: '',
+      produto: '',
+      midia: '',
+      modelo: '',
+      validade: ''
+    },
     produtoId: '',
     parceiroId: '',
+    parceiroBusca: '',
     resultado: null,
     alertas: [],
     aba: 'gerar',
@@ -1633,7 +1641,13 @@ function renderGeradorLinksAr() {
     <div class="ar-generator">
       <section class="ar-step">
         <h3>Produto</h3>
-        <input class="config-input" type="search" value="${escapeAttr(state.ar.busca)}" placeholder="Digite o nome do produto que deseja" oninput="alterarBuscaAr(this.value)">
+        <div class="ar-search-grid">
+          <label><span>AC para compra</span><input class="config-input" type="search" value="${escapeAttr(state.ar.filtros.ac)}" oninput="alterarFiltroProdutoAr('ac', this.value)"></label>
+          <label><span>Produto desejado</span><input class="config-input" type="search" value="${escapeAttr(state.ar.filtros.produto)}" oninput="alterarFiltroProdutoAr('produto', this.value)"></label>
+          <label><span>Mídia</span><input class="config-input" type="search" value="${escapeAttr(state.ar.filtros.midia)}" oninput="alterarFiltroProdutoAr('midia', this.value)"></label>
+          <label><span>Modelo</span><input class="config-input" type="search" value="${escapeAttr(state.ar.filtros.modelo)}" oninput="alterarFiltroProdutoAr('modelo', this.value)"></label>
+          <label><span>Validade</span><input class="config-input" type="search" value="${escapeAttr(state.ar.filtros.validade)}" oninput="alterarFiltroProdutoAr('validade', this.value)"></label>
+        </div>
         <div class="ar-product-options">
           ${renderOpcoesProdutosAr()}
         </div>
@@ -1642,12 +1656,13 @@ function renderGeradorLinksAr() {
       <section class="ar-side">
         <label>
           <span>Parceiro</span>
-          <select class="config-input" onchange="selecionarParceiroAr(this.value)">
-            <option value="">Selecione o parceiro</option>
-            ${state.ar.parceiros.map(parceiro => `<option value="${escapeAttr(parceiro.id)}" ${state.ar.parceiroId === parceiro.id ? 'selected' : ''}>${escapeHtml(parceiro.nome)}${parceiro.codigo_revendedor ? ` - ${escapeHtml(parceiro.codigo_revendedor)}` : ''}</option>`).join('')}
-          </select>
+          <input class="config-input" type="search" value="${escapeAttr(state.ar.parceiroBusca)}" placeholder="Digite nome, empresa ou código" oninput="alterarBuscaParceiroAr(this.value)">
         </label>
+        <div class="ar-partner-options">
+          ${renderOpcoesParceirosAr()}
+        </div>
         ${renderResumoSelecaoAr()}
+        ${renderOrcamentoAr()}
         <button id="ar_gerar_btn" class="save-btn saving-btn ${state.ar.gerando ? 'is-saving' : ''}" type="button" onclick="gerarLinksAr()" ${state.ar.gerando ? 'disabled' : ''}>${state.ar.gerando ? 'Gerando...' : 'Gerar links'}</button>
         ${renderResultadoAr()}
       </section>
@@ -1668,26 +1683,38 @@ function renderListaProdutosAr() {
 }
 
 function produtosFiltradosAr() {
-  const termos = normalizarBuscaAr(state.ar.busca).split(' ').filter(Boolean);
+  if (state.ar.aba === 'produtos') {
+    const termos = normalizarBuscaAr(state.ar.busca).split(' ').filter(Boolean);
 
-  if (!termos.length) {
-    return state.ar.produtos;
+    if (!termos.length) {
+      return state.ar.produtos;
+    }
+
+    return state.ar.produtos.filter(produto => {
+      const texto = normalizarBuscaAr([
+        produto.descricao_comercial,
+        produto.product_id,
+        produto.ac,
+        produto.tipo_certificado,
+        produto.midia,
+        produto.modelo,
+        produto.validade,
+        produto.grupo,
+        produto.codigo_grupo
+      ].join(' '));
+
+      return termos.every(termo => texto.indexOf(termo) >= 0);
+    });
   }
 
-  return state.ar.produtos.filter(produto => {
-    const texto = normalizarBuscaAr([
-      produto.descricao_comercial,
-      produto.product_id,
-      produto.ac,
-      produto.tipo_certificado,
-      produto.midia,
-      produto.modelo,
-      produto.validade,
-      produto.grupo,
-      produto.codigo_grupo
-    ].join(' '));
+  const filtros = state.ar.filtros || {};
 
-    return termos.every(termo => texto.indexOf(termo) >= 0);
+  return state.ar.produtos.filter(produto => {
+    return campoProdutoCombinaAr(produto.ac, filtros.ac)
+      && campoProdutoCombinaAr([produto.descricao_comercial, produto.product_id, produto.tipo_certificado, produto.grupo, produto.codigo_grupo].join(' '), filtros.produto)
+      && campoProdutoCombinaAr(produto.midia, filtros.midia)
+      && campoProdutoCombinaAr(produto.modelo, filtros.modelo)
+      && campoProdutoCombinaAr(produto.validade, filtros.validade);
   });
 }
 
@@ -1742,8 +1769,45 @@ function renderOpcoesProdutosAr() {
   return produtos.map(produto => `
     <button class="ar-product-option ${state.ar.produtoId === produto.id ? 'selected' : ''}" type="button" onclick="selecionarProdutoAr('${escapeAttr(produto.id)}')">
       <strong>${escapeHtml(produto.descricao_comercial || 'Produto')}</strong>
-      <span>${escapeHtml([produto.product_id, produto.ac, produto.modelo, produto.validade].filter(Boolean).join(' | '))}</span>
+      <span>${escapeHtml([produto.product_id, produto.ac, produto.modelo].filter(Boolean).join(' | '))}</span>
+      <b>Validade: ${escapeHtml(produto.validade || '-')}</b>
       <small>${escapeHtml(produto.codigo_grupo || produto.grupo || 'Sem grupo')} | Com desc.: ${escapeHtml(produto.preco_com_desconto || 'Não disponível')} | Sem desc.: ${escapeHtml(produto.preco_sem_desconto || 'Não disponível')}</small>
+    </button>
+  `).join('');
+}
+
+function parceirosFiltradosAr() {
+  const termo = normalizarBuscaAr(state.ar.parceiroBusca);
+
+  if (!termo) {
+    return state.ar.parceiros.slice(0, 6);
+  }
+
+  return state.ar.parceiros.filter(parceiro => {
+    const texto = normalizarBuscaAr([
+      parceiro.nome,
+      parceiro.nome_empresa,
+      parceiro.codigo_revendedor,
+      parceiro.status,
+      parceiro.email_comercial
+    ].join(' '));
+
+    return texto.indexOf(termo) >= 0;
+  }).slice(0, 8);
+}
+
+function renderOpcoesParceirosAr() {
+  const parceiros = parceirosFiltradosAr();
+
+  if (!parceiros.length) {
+    return '<p class="quick-link-empty">Nenhum parceiro encontrado.</p>';
+  }
+
+  return parceiros.map(parceiro => `
+    <button class="ar-partner-option ${state.ar.parceiroId === parceiro.id ? 'selected' : ''}" type="button" onclick="selecionarParceiroAr('${escapeAttr(parceiro.id)}')">
+      <strong>${escapeHtml(parceiro.nome || 'Parceiro')}</strong>
+      <span>${escapeHtml([parceiro.codigo_revendedor || 'sem código', parceiro.status || '-'].join(' | '))}</span>
+      ${parceiro.nome_empresa ? `<small>${escapeHtml(parceiro.nome_empresa)}</small>` : ''}
     </button>
   `).join('');
 }
@@ -1761,8 +1825,55 @@ function renderResumoSelecaoAr() {
       <div>
         <span>Parceiro</span>
         <strong>${escapeHtml(parceiro?.nome || 'Nenhum parceiro selecionado')}</strong>
-        ${parceiro ? `<small>${escapeHtml(parceiro.status || '-')}${parceiro.codigo_revendedor ? ` | ${escapeHtml(parceiro.codigo_revendedor)}` : ' | sem código'}</small>` : ''}
+        ${parceiro ? renderDetalhesParceiroAr(parceiro) : ''}
       </div>
+    </div>
+  `;
+}
+
+function renderDetalhesParceiroAr(parceiro) {
+  const linhas = [
+    ['Empresa', parceiro.nome_empresa],
+    ['Código revendedor', parceiro.codigo_revendedor || 'sem código'],
+    ['Status', parceiro.status || 'não informado'],
+    ['WhatsApp pessoal', parceiro.whatsapp_pessoal],
+    ['WhatsApp comercial', parceiro.whatsapp_comercial],
+    ['E-mail comercial', parceiro.email_comercial],
+    ['Observação', parceiro.observacao]
+  ];
+
+  return `
+    <dl class="ar-partner-details">
+      ${linhas.filter(([, valor]) => valor).map(([rotulo, valor]) => `
+        <div><dt>${escapeHtml(rotulo)}</dt><dd>${escapeHtml(valor)}</dd></div>
+      `).join('')}
+    </dl>
+  `;
+}
+
+function renderOrcamentoAr() {
+  const produto = obterProdutoSelecionadoAr();
+  const parceiro = obterParceiroSelecionadoAr();
+
+  if (!produto || !parceiro) {
+    return '';
+  }
+
+  const economia = formatarEconomiaProdutoAr(produto);
+
+  return `
+    <div class="ar-budget">
+      <div class="ar-budget-product">
+        <span>Produto</span>
+        <strong>${escapeHtml(produto.descricao_comercial || 'Produto')}</strong>
+        <small>${escapeHtml(produto.modelo || '-')} | Validade: ${escapeHtml(produto.validade || '-')}</small>
+      </div>
+      <div class="ar-budget-values">
+        <div class="discount"><span>Com desconto</span><strong>${escapeHtml(formatarMoedaProdutoAr(produto.preco_com_desconto))}</strong></div>
+        <div><span>Sem desconto</span><strong>${escapeHtml(formatarMoedaProdutoAr(produto.preco_sem_desconto))}</strong></div>
+        <div class="economy"><span>Economia</span><strong>${escapeHtml(economia)}</strong></div>
+      </div>
+      <button id="ar_copy_orcamento" class="link-sub-btn" type="button" onclick="copiarOrcamentoAr()">Copiar orçamento</button>
     </div>
   `;
 }
@@ -1774,14 +1885,21 @@ function renderResultadoAr() {
 
   return `
     <div class="ar-result">
+      <h3>Links gerados</h3>
       ${state.ar.alertas.length ? `<p class="field-error">${escapeHtml(state.ar.alertas.join(' '))}</p>` : ''}
       <article>
         <span>Link com desconto</span>
-        <button id="ar_copy_com" class="link-sub-btn" type="button" onclick="copiarTextoAr('ar_copy_com', '${escapeAttr(state.ar.resultado.links.com_desconto)}', 'Copiar link com desconto')">Copiar link com desconto</button>
+        <div class="link-buttons">
+          <a class="link-sub-btn" href="${escapeAttr(state.ar.resultado.links.com_desconto)}" target="_blank" rel="noopener">Abrir</a>
+          <button id="ar_copy_com" class="link-sub-btn" type="button" onclick="copiarTextoAr('ar_copy_com', '${escapeAttr(state.ar.resultado.links.com_desconto)}', 'Copiar')">Copiar</button>
+        </div>
       </article>
       <article>
         <span>Link sem desconto</span>
-        <button id="ar_copy_sem" class="link-sub-btn" type="button" onclick="copiarTextoAr('ar_copy_sem', '${escapeAttr(state.ar.resultado.links.sem_desconto)}', 'Copiar link sem desconto')">Copiar link sem desconto</button>
+        <div class="link-buttons">
+          <a class="link-sub-btn" href="${escapeAttr(state.ar.resultado.links.sem_desconto)}" target="_blank" rel="noopener">Abrir</a>
+          <button id="ar_copy_sem" class="link-sub-btn" type="button" onclick="copiarTextoAr('ar_copy_sem', '${escapeAttr(state.ar.resultado.links.sem_desconto)}', 'Copiar')">Copiar</button>
+        </div>
       </article>
     </div>
   `;
@@ -1812,6 +1930,32 @@ function alterarBuscaAr(valor) {
   renderPainelAr();
 }
 
+function campoProdutoCombinaAr(valor, filtro) {
+  const textoFiltro = normalizarBuscaAr(filtro);
+
+  if (!textoFiltro) {
+    return true;
+  }
+
+  return normalizarBuscaAr(valor).indexOf(textoFiltro) >= 0;
+}
+
+function alterarFiltroProdutoAr(chave, valor) {
+  state.ar.filtros[chave] = valor;
+  state.ar.produtoId = '';
+  state.ar.resultado = null;
+  state.ar.alertas = [];
+  renderPainelAr();
+}
+
+function alterarBuscaParceiroAr(valor) {
+  state.ar.parceiroBusca = valor;
+  state.ar.parceiroId = '';
+  state.ar.resultado = null;
+  state.ar.alertas = [];
+  renderPainelAr();
+}
+
 function selecionarProdutoAr(id) {
   state.ar.produtoId = id;
   state.ar.resultado = null;
@@ -1821,6 +1965,8 @@ function selecionarProdutoAr(id) {
 
 function selecionarParceiroAr(id) {
   state.ar.parceiroId = id;
+  const parceiro = obterParceiroSelecionadoAr();
+  state.ar.parceiroBusca = parceiro ? parceiro.nome : state.ar.parceiroBusca;
   state.ar.resultado = null;
   state.ar.alertas = [];
   renderPainelAr();
@@ -1905,12 +2051,99 @@ async function copiarTextoAr(botaoId, texto, original) {
   }
 }
 
+async function copiarOrcamentoAr() {
+  const texto = montarTextoOrcamentoAr();
+  const botao = document.getElementById('ar_copy_orcamento');
+
+  if (!texto || !botao) return;
+
+  try {
+    await navigator.clipboard.writeText(texto);
+    botao.textContent = 'Orçamento copiado';
+    botao.classList.add('copied');
+    window.setTimeout(() => {
+      botao.textContent = 'Copiar orçamento';
+      botao.classList.remove('copied');
+    }, 1600);
+  } catch (erro) {
+    botao.textContent = 'Erro ao copiar';
+    window.setTimeout(() => {
+      botao.textContent = 'Copiar orçamento';
+    }, 1600);
+  }
+}
+
+function montarTextoOrcamentoAr() {
+  const produto = obterProdutoSelecionadoAr();
+
+  if (!produto) {
+    return '';
+  }
+
+  return [
+    'Segue orçamento do certificado digital:',
+    '',
+    `*${produto.descricao_comercial || 'Produto'} | ${produto.modelo || '-'}*`,
+    `Validade: *${produto.validade || '-'}*`,
+    '',
+    `Valor com desconto: *${formatarMoedaProdutoAr(produto.preco_com_desconto)}*`,
+    `Valor sem desconto: ${formatarMoedaProdutoAr(produto.preco_sem_desconto)}`,
+    '',
+    `Economia: *${formatarEconomiaProdutoAr(produto)}*`,
+    '----'
+  ].join('\n');
+}
+
 function obterProdutoSelecionadoAr() {
   return state.ar.produtos.find(produto => produto.id === state.ar.produtoId) || null;
 }
 
 function obterParceiroSelecionadoAr() {
   return state.ar.parceiros.find(parceiro => parceiro.id === state.ar.parceiroId) || null;
+}
+
+function formatarEconomiaProdutoAr(produto) {
+  const com = parseMoedaAr(produto.preco_com_desconto);
+  const sem = parseMoedaAr(produto.preco_sem_desconto);
+
+  if (com == null || sem == null) {
+    return 'Não disponível';
+  }
+
+  return formatarMoedaNumeroAr(Math.max(sem - com, 0));
+}
+
+function formatarMoedaProdutoAr(valor) {
+  const numero = parseMoedaAr(valor);
+
+  if (numero == null) {
+    return valor || 'Não disponível';
+  }
+
+  return formatarMoedaNumeroAr(numero);
+}
+
+function parseMoedaAr(valor) {
+  if (valor === '' || valor == null) {
+    return null;
+  }
+
+  const texto = String(valor).replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
+
+  if (!texto) {
+    return null;
+  }
+
+  const numero = Number(texto);
+
+  return Number.isNaN(numero) ? null : numero;
+}
+
+function formatarMoedaNumeroAr(valor) {
+  return valor.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  });
 }
 
 function normalizarBuscaAr(texto) {
