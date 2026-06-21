@@ -191,6 +191,7 @@ function renderDashboard() {
   document.getElementById('app').innerHTML = `
     <main class="dashboard">
       <header class="topbar">
+        ${renderHeaderLogo()}
         <div class="brand">
           <h1>${escapeHtml(nomeSistema)}</h1>
           <p>${escapeHtml(subtitulo)}</p>
@@ -252,6 +253,14 @@ function renderDashboard() {
         `).join('')}
       </section>
     </main>
+  `;
+}
+
+function renderHeaderLogo() {
+  return `
+    <div class="brand-logo-slot" aria-label="Transmares Corretora de Seguros">
+      <img src="assets/logo-transmares.png" alt="Transmares Corretora de Seguros">
+    </div>
   `;
 }
 
@@ -361,6 +370,7 @@ function renderAdministracao() {
   document.getElementById('app').innerHTML = `
     <main class="dashboard">
       <header class="topbar">
+        ${renderHeaderLogo()}
         <div class="brand">
           <h1>${escapeHtml(nomeSistema)}</h1>
           <p>${escapeHtml(subtitulo)}</p>
@@ -907,6 +917,7 @@ function renderLinksUteis() {
   document.getElementById('app').innerHTML = `
     <main class="dashboard">
       <header class="topbar">
+        ${renderHeaderLogo()}
         <div class="brand">
           <h1>${escapeHtml(nomeSistema)}</h1>
           <p>${escapeHtml(subtitulo)}</p>
@@ -1268,6 +1279,7 @@ function renderCentralSenhas() {
   document.getElementById('app').innerHTML = `
     <main class="dashboard">
       <header class="topbar">
+        ${renderHeaderLogo()}
         <div class="brand">
           <h1>${escapeHtml(nomeSistema)}</h1>
           <p>${escapeHtml(subtitulo)}</p>
@@ -1605,6 +1617,7 @@ function renderPainelAr() {
   document.getElementById('app').innerHTML = `
     <main class="dashboard">
       <header class="topbar">
+        ${renderHeaderLogo()}
         <div class="brand">
           <h1>${escapeHtml(nomeSistema)}</h1>
           <p>${escapeHtml(subtitulo)}</p>
