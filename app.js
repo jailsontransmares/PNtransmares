@@ -468,6 +468,11 @@ function agruparConfiguracoes(configs) {
       id: 'limites',
       titulo: 'Limites do Painel',
       chaves: ['limite_favoritos', 'limite_avisos', 'janela_aniversarios_dias', 'limite_aniversariantes', 'retencao_historico_meses']
+    },
+    {
+      id: 'painel_ar',
+      titulo: 'Painel AR',
+      chaves: ['ar_produtos_spreadsheet_id', 'ar_produtos_sheet_name', 'ar_link_com_desconto_template', 'ar_link_sem_desconto_template', 'ar_link_templates_json']
     }
   ];
   const porChave = configs.reduce((acc, item) => {
@@ -498,7 +503,12 @@ function obterRotuloConfig(chave) {
     retencao_historico_meses: 'Retenção do histórico',
     janela_aniversarios_dias: 'Janela de aniversários',
     limite_aniversariantes: 'Máximo de aniversariantes',
-    limite_avisos: 'Máximo de avisos'
+    limite_avisos: 'Máximo de avisos',
+    ar_produtos_spreadsheet_id: 'Planilha de produtos AR',
+    ar_produtos_sheet_name: 'Aba de produtos AR',
+    ar_link_com_desconto_template: 'Template com desconto',
+    ar_link_sem_desconto_template: 'Template sem desconto',
+    ar_link_templates_json: 'Templates em lote'
   };
 
   return rotulos[chave] || chave;
@@ -731,6 +741,10 @@ async function salvarRegistroAdmin(entidade, id) {
 
 function renderConfigInput(item, inputId, disabled) {
   const valor = escapeAttr(item.valor || '');
+
+  if (['ar_link_com_desconto_template', 'ar_link_sem_desconto_template', 'ar_link_templates_json'].indexOf(item.chave) >= 0) {
+    return `<textarea id="${inputId}" class="config-input config-textarea" rows="${item.chave === 'ar_link_templates_json' ? '7' : '3'}" ${disabled}>${valor}</textarea>`;
+  }
 
   if (item.tipo === 'cor') {
     return `
@@ -1588,12 +1602,11 @@ function renderPainelAr() {
             <h2>Painel AR Transmares</h2>
             <p>Consulte produtos, selecione o parceiro e gere links comerciais.</p>
           </div>
-          ${gestor ? `
-            <div class="module-tabs" role="group" aria-label="Visualização do Painel AR">
-              <button class="${state.ar.aba === 'gerar' ? 'active' : ''}" type="button" onclick="selecionarAbaAr('gerar')">Gerar links</button>
-              <button class="${state.ar.aba === 'historico' ? 'active' : ''}" type="button" onclick="selecionarAbaAr('historico')">Histórico</button>
-            </div>
-          ` : ''}
+          <div class="module-tabs" role="group" aria-label="Visualização do Painel AR">
+            <button class="${state.ar.aba === 'gerar' ? 'active' : ''}" type="button" onclick="selecionarAbaAr('gerar')">Gerar links</button>
+            <button class="${state.ar.aba === 'produtos' ? 'active' : ''}" type="button" onclick="selecionarAbaAr('produtos')">Lista produtos</button>
+            ${gestor ? `<button class="${state.ar.aba === 'historico' ? 'active' : ''}" type="button" onclick="selecionarAbaAr('historico')">Histórico</button>` : ''}
+          </div>
         </div>
 
         ${state.ar.message ? `<p class="admin-message">${escapeHtml(state.ar.message)}</p>` : ''}
@@ -1608,17 +1621,25 @@ function renderConteudoAr(gestor) {
     return renderHistoricoAr();
   }
 
+  if (state.ar.aba === 'produtos') {
+    return renderListaProdutosAr();
+  }
+
+  return renderGeradorLinksAr();
+}
+
+function renderGeradorLinksAr() {
   return `
-    <div class="ar-layout">
-      <section class="ar-products">
-        <div class="ar-toolbar">
-          <input class="config-input" type="search" value="${escapeAttr(state.ar.busca)}" placeholder="Digite o nome do produto que deseja" oninput="alterarBuscaAr(this.value)">
-          <span>${produtosFiltradosAr().length} produto(s)</span>
+    <div class="ar-generator">
+      <section class="ar-step">
+        <h3>Produto</h3>
+        <input class="config-input" type="search" value="${escapeAttr(state.ar.busca)}" placeholder="Digite o nome do produto que deseja" oninput="alterarBuscaAr(this.value)">
+        <div class="ar-product-options">
+          ${renderOpcoesProdutosAr()}
         </div>
-        ${renderTabelaProdutosAr()}
       </section>
 
-      <aside class="ar-side">
+      <section class="ar-side">
         <label>
           <span>Parceiro</span>
           <select class="config-input" onchange="selecionarParceiroAr(this.value)">
@@ -1629,8 +1650,20 @@ function renderConteudoAr(gestor) {
         ${renderResumoSelecaoAr()}
         <button id="ar_gerar_btn" class="save-btn saving-btn ${state.ar.gerando ? 'is-saving' : ''}" type="button" onclick="gerarLinksAr()" ${state.ar.gerando ? 'disabled' : ''}>${state.ar.gerando ? 'Gerando...' : 'Gerar links'}</button>
         ${renderResultadoAr()}
-      </aside>
+      </section>
     </div>
+  `;
+}
+
+function renderListaProdutosAr() {
+  return `
+    <section>
+      <div class="ar-toolbar">
+        <input class="config-input" type="search" value="${escapeAttr(state.ar.busca)}" placeholder="Buscar por descrição, AC, modelo, validade" oninput="alterarBuscaAr(this.value)">
+        <span>${produtosFiltradosAr().length} produto(s)</span>
+      </div>
+      ${renderTabelaProdutosAr()}
+    </section>
   `;
 }
 
@@ -1697,6 +1730,22 @@ function renderTabelaProdutosAr() {
       `).join('')}
     </div>
   `;
+}
+
+function renderOpcoesProdutosAr() {
+  const produtos = produtosFiltradosAr().slice(0, 8);
+
+  if (!produtos.length) {
+    return '<p class="quick-link-empty">Nenhum produto encontrado.</p>';
+  }
+
+  return produtos.map(produto => `
+    <button class="ar-product-option ${state.ar.produtoId === produto.id ? 'selected' : ''}" type="button" onclick="selecionarProdutoAr('${escapeAttr(produto.id)}')">
+      <strong>${escapeHtml(produto.descricao_comercial || 'Produto')}</strong>
+      <span>${escapeHtml([produto.product_id, produto.ac, produto.modelo, produto.validade].filter(Boolean).join(' | '))}</span>
+      <small>${escapeHtml(produto.codigo_grupo || produto.grupo || 'Sem grupo')} | Com desc.: ${escapeHtml(produto.preco_com_desconto || 'Não disponível')} | Sem desc.: ${escapeHtml(produto.preco_sem_desconto || 'Não disponível')}</small>
+    </button>
+  `).join('');
 }
 
 function renderResumoSelecaoAr() {
