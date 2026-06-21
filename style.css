@@ -287,12 +287,26 @@ body.dark .brand h1 {
 
 .info-card,
 .module-card {
-  background: rgba(255, 255, 255, 0.94);
-  background: color-mix(in srgb, var(--surface-glass-strong) 92%, var(--card));
   border: var(--glass-border-subtle);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
   padding: 20px;
+}
+
+.info-card {
+  background: rgba(255, 255, 255, 0.94);
+  background: color-mix(in srgb, var(--surface-glass-strong) 92%, var(--card));
+}
+
+.module-card {
+  background: rgba(255, 255, 255, 0.82);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--cor-principal) 7%, transparent), transparent),
+    color-mix(in srgb, var(--surface-glass) 84%, var(--card));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: var(--glass-border);
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.08);
 }
 
 .info-card h2,
